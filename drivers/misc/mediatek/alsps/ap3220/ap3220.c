@@ -42,6 +42,9 @@
 //<Line> <add wakelock include> <20131113> <mickal.ma>
 #include <linux/wakelock.h>
 
+#ifdef CONFIG_POCKETMOD
+#include <linux/pocket_mod.h>
+#endif
 
 //LINE<JIRA_ID><DATE20131219><add PS Calibration>zenghaihui
 static int g_ps_cali_flag = 0;
@@ -573,6 +576,45 @@ static int ap3220_get_als_value(struct ap3220_priv *obj, u16 als)
 
 }
 
+#ifdef CONFIG_POCKETMOD
+int ap3220_pocket_detection_check(void)
+{
+	int ps_val;
+	int als_val;
+
+	struct ap3220_priv *obj = ap3220_obj;
+	
+	if(obj == NULL)
+	{
+		APS_DBG("[ap3220] ap3220_obj is NULL!");
+		return 0;
+	}
+	else
+	{
+		ap3220_enable_ps(obj->client, 1);
+
+		// @agaphetos
+		// to do: msleep(1) will be replaced 
+
+		// @thewisenerd
+		// buffer pocket_mod value
+		// sensor_check will otherwise be called every time a touch is made when screen off
+		// simply add a cputime_t;
+		// if ktime_to_ms - cputime_t < 2*sec { do not prox_check }
+		// else { prox_check }
+		msleep(1);
+
+		ps_val = ap3220_get_ps_value(obj, obj->ps);
+		als_val = ap3220_get_als_value(obj, obj->ps);
+
+		APS_DBG("[ap3220] %s als_val = %d, ps_val = %d\n", __func__, als_val, ps_val);
+
+		ap3220_enable_ps(obj->client, 0);
+
+		return (ps_val);
+	}
+}
+#endif
 
 /*-------------------------------attribute file for debugging----------------------------------*/
 
@@ -2251,6 +2293,10 @@ static int ap3220_i2c_probe(struct i2c_client *client, const struct i2c_device_i
 	obj->early_drv.suspend  = ap3220_early_suspend,
 	obj->early_drv.resume   = ap3220_late_resume,    
 	register_early_suspend(&obj->early_drv);
+	#endif
+
+	#ifdef CONFIG_POCKETMOD
+		alsps_dev = 'c';
 	#endif
 
 	APS_LOG("%s: OK\n", __func__);
