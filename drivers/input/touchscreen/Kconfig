@@ -467,6 +467,14 @@ config TOUCHSCREEN_MTK_GT9XX_HOTKNOT_SCP
 	bool "GT9XX with SCP for Mediatek package"
 	depends on TOUCHSCREEN_MTK
 
+config MTK_EKTF2K
+        bool "MTK_EKTF2K for Mediatek package"
+        default n
+        
+config MTK_GOODIX9XX
+        bool "MTK_GOODIX9XX for Mediatek package"
+        default n
+
 config TOUCHSCREEN_HP600
 	tristate "HP Jornada 6xx touchscreen"
 	depends on SH_HP6XX && SH_ADC

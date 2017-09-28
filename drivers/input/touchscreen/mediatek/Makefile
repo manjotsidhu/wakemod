@@ -112,3 +112,12 @@ endif
 ifeq ($(CONFIG_MTK_MIT200),y)
 obj-y	+=  melfas_mit200/
 endif
+
+ifeq ($(CONFIG_MTK_GOODIX9XX),y) 
+obj-y	+=  Goodix9xx/
+endif
+
+ifeq ($(CONFIG_MTK_EKTF2K),y) 
+obj-y	+=  ektf2k/
+endif
+
