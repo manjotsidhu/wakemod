@@ -1164,7 +1164,7 @@ CONFIG_CUSTOM_KERNEL_ALSPS=y
 # CONFIG_CUSTOM_SEC_AUTH_SUPPORT is not set
 CONFIG_CUSTOM_KERNEL_MAGNETOMETER=y
 # CONFIG_CUSTOM_KERNEL_BAROMETER is not set
-CONFIG_CUSTOM_KERNEL_IMGSENSOR=""
+CONFIG_CUSTOM_KERNEL_IMGSENSOR="ov5648_mipi_raw_darling ov5648_mipi_raw_truly ov5648_mipi_raw_sunwin ov5648_mipi_raw_darling_zl hi258_mipi_yuv_cmk hi258_mipi_yuv_sw"
 CONFIG_CUSTOM_KERNEL_LCM="hx8369b_wvga_dsi_vdo_tinno hx8369b_wvga_dsi_vdo_tinno_txd"
 CONFIG_CUSTOM_KERNEL_FLASHLIGHT="constant_flashlight"
 CONFIG_CUSTOM_KERNEL_EXTMD=""
