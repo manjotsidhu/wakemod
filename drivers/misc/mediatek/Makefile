@@ -149,6 +149,7 @@ obj-$(CONFIG_ZRAM)	+= mlog/
 obj-$(CONFIG_MTK_CAM_CAL_GT24C32A_SUPPORT)	+= cam_cal/GT24c32a_eeprom/
 obj-$(CONFIG_MTK_CAM_CAL_BRCC064GWZ_3_SUPPORT) += cam_cal/BRCC064GWZ_3_eeprom/
 obj-$(CONFIG_MTK_CAM_CAL_BRCB032GWZ_3_SUPPORT) += cam_cal/BRCB032GWZ_3_eeprom/
+obj-$(CONFIG_MTK_CAM_CAL_A5142OTP_SUPPORT) += cam_cal/a5142otp/
 obj-y	+= lens/
 obj-y	+= imgsensor/src/
 
