@@ -150,6 +150,11 @@ typedef struct {
 #define AAL_GET_ALS_MODE				_IOR(ALSPS, 0x15,int)
 #define AAL_GET_ALS_DATA				_IOR(ALSPS, 0x16,int)
 
+#define ALSPS_IOCTL_PS_CALI_START			_IOW(ALSPS, 0x14, int[2])
+#define ALSPS_IOCTL_PS_SET_CALI			_IOW(ALSPS, 0x15, int[2])
+#define ALSPS_IOCTL_PS_GET_CALI			_IOW(ALSPS, 0x16, int[2])
+#define ALSPS_IOCTL_PS_CLR_CALI			_IO(ALSPS, 0x17)
+#define ALSPS_IOCTL_PS_CALI_RAW_DATA				_IOR(ALSPS, 0x18, int)
 
 #define GYROSCOPE							0X86
 #define GYROSCOPE_IOCTL_INIT					_IO(GYROSCOPE, 0x01)

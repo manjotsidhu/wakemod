@@ -56,3 +56,11 @@ endif
 ifeq ($(CONFIG_MTK_LIS3DH_AUTO),y)
 obj-y   +=  lis3dh_auto/
 endif
+
+ifeq ($(CONFIG_MTK_BMA222E_AUTO),y)
+obj-y   +=  bma222E_auto/
+endif
+
+ifeq ($(CONFIG_MTK_KXTJ2_1009_AUTO),y)
+obj-y   +=  KXTJ2_1009_auto/
+endif

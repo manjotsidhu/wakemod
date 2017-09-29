@@ -46,3 +46,7 @@ endif
 ifeq ($(CONFIG_MTK_TMD2772_AUTO),y)
 obj-y	+=  tmd2772_auto/
 endif
+
+ifeq ($(CONFIG_MTK_AP3220),y)
+obj-y	+=  ap3220/
+endif
