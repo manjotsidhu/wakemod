@@ -1244,6 +1244,7 @@ static int upgrade_firmware_from_builtin(struct cyttsp4_device *ttsp)
 			CY_FW_FILE_R300_NAME, dev, GFP_KERNEL, ttsp,
 			_cyttsp4_firmware_cont_builtin);}
 
+
 	/* END PN:DTS2013053100307 ,Added by l00184147, 2013/05/31*/
 	else
 		{
@@ -1800,7 +1801,6 @@ static void cyttsp4_fw_and_config_upgrade(
     module_name = get_touch_module_name(pannel_id);
     sprintf(touch_info,"CYPRESS_TMA463_%s.%d",module_name,(data->si->ttconfig.version&0XFF));
     dev_info(dev,"%s,%s\n",__func__,touch_info);
-
     return;
     /* END PN:SPBB-1273   ,Added by F00184246, 2013/3/1*/
 }

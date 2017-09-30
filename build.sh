@@ -25,18 +25,18 @@ nocol='\033[0m'
 # Modify the following variable if you want to build
 export ARCH=arm
 export ARCH_MTK_PLATFORM=mt6582
-export CROSS_COMPILE=/home/popz/Desktop/toolchain/arm-eabi-4.8/bin/arm-eabi-
-export KBUILD_BUILD_USER="Manjot_Sidhu"
+export CROSS_COMPILE=~/arm-eabi-4.8/bin/arm-eabi-
+export KBUILD_BUILD_USER="ManjotSidhu"
 export KBUILD_BUILD_HOST="GODz_Android_Dev"
 
 
 compile_kernel ()
 {
 echo -e "$blue***********************************************"
-echo "          Compiling GODz v2 kernel          "
+echo "          Compiling WakeMod kernel          "
 echo -e "***********************************************$nocol"
 make h30u10_defconfig
-make -j4
+make -j2
 if ! [ -a $ZIMAGE ];
 then
 echo -e "$red Kernel Compilation failed! Fix the errors! $nocol"
@@ -46,7 +46,7 @@ fi
 
 case $1 in
 clean)
-make ARCH=arm -j4 clean mrproper
+make ARCH=arm -j2 clean mrproper
 rm -rf include/linux/autoconf.h
 ;;
 *)

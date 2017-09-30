@@ -197,7 +197,7 @@ static void synaptics_rmi4_sensor_wake(struct synaptics_rmi4_data *rmi4_data);
 static void synaptics_rmi4_set_configured(struct synaptics_rmi4_data *rmi4_data);
 static struct kobject *touch_screen_kobject = NULL;
 
-#ifdef  HUAWEI_EASY_WAKEUP
+#ifdef  CONFIG_HUAWEI_EASY_WAKEUP
 static ssize_t synaptics_easy_wakeup_gesture_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
 static ssize_t synaptics_easy_wakeup_gesture_store(struct device *dev,
@@ -442,7 +442,7 @@ static struct device_attribute attrs[] = {
 };
 
 
-#ifdef  HUAWEI_EASY_WAKEUP
+#ifdef  CONFIG_HUAWEI_EASY_WAKEUP
 #define F51_LOCUS_DATA_NUM 24
 #define F51_LOCUS_DATA_LENS 4
 #define F51_LETTER_LOCUS_NUM 6
@@ -691,7 +691,7 @@ static ssize_t synaptics_rmi4_suspend_store(struct device *dev,
 	return count;
 }
 
-#ifdef HUAWEI_EASY_WAKEUP
+#ifdef CONFIG_HUAWEI_EASY_WAKEUP
 static ssize_t synaptics_easy_wakeup_position_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -1079,7 +1079,7 @@ exit:
 	return retval;
 }
 
-#ifdef  HUAWEI_EASY_WAKEUP
+#ifdef  CONFIG_HUAWEI_EASY_WAKEUP
 static struct kobject* tp_get_touch_screen_obj(void)
 {
 	if( NULL == touch_screen_kobject )
@@ -1367,11 +1367,11 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	int wx;
 	int wy;
 	int temp;	
-#ifdef HUAWEI_EASY_WAKEUP
+#ifdef CONFIG_HUAWEI_EASY_WAKEUP
 	tp_log_debug("%s:in! sleep_gesture_flag =%d",__func__,rmi4_data->sleep_gesture_flag);
 	if(true == rmi4_data->sleep_gesture_flag)
 		return synaptics_rmi4_f11_gesture_report(rmi4_data,fhandler);
-#endif /*HUAWEI_EASY_WAKEUP*/
+#endif /*CONFIG_HUAWEI_EASY_WAKEUP*/
 	/*
 	 * The number of finger status registers is determined by the
 	 * maximum number of fingers supported - 2 bits per finger. So
@@ -2975,7 +2975,7 @@ static int synaptics_rmi4_set_input_dev(struct synaptics_rmi4_data *rmi4_data)
 #ifdef INPUT_PROP_DIRECT
 	set_bit(INPUT_PROP_DIRECT, rmi4_data->input_dev->propbit);
 #endif
-#ifdef HUAWEI_EASY_WAKEUP
+#ifdef CONFIG_HUAWEI_EASY_WAKEUP
 	for(i =0;i < GESTURE_MAX ;i++ ){
 		set_bit(synaptics_gesture_key_event[i], rmi4_data->input_dev->keybit);
 	}
@@ -3338,8 +3338,8 @@ static int __devinit synaptics_rmi4_probe(struct i2c_client *client,
 	rmi4_data->irq_enabled = false;
 	rmi4_data->fingers_on_2d = false;
 	touch_screen_kobject =NULL;
-#ifdef HUAWEI_EASY_WAKEUP
-	tp_log_info("%s(line %d)defined HUAWEI_EASY_WAKEUP\n",__func__,__LINE__);
+#ifdef CONFIG_HUAWEI_EASY_WAKEUP
+	tp_log_info("%s(line %d)defined CONFIG_HUAWEI_EASY_WAKEUP\n",__func__,__LINE__);
     mutex_init(&wrong_touch_lock);
 	rmi4_data->easy_wakeup_gesture = 0;
 	rmi4_data->easy_wakeup_support = 1;
@@ -3390,7 +3390,7 @@ static int __devinit synaptics_rmi4_probe(struct i2c_client *client,
 		tp_log_err("%s(line %d)Failed to set up input device\n",__func__,__LINE__);
 		goto err_set_input_dev;
 	}
- #ifdef HUAWEI_EASY_WAKEUP    
+ #ifdef CONFIG_HUAWEI_EASY_WAKEUP    
 	retval = synaptics_rmi4_i2c_read(rmi4_data,
 			EASY_WAKEUP_FASTRATE,
 			&device_ctrl,
@@ -3447,7 +3447,7 @@ static int __devinit synaptics_rmi4_probe(struct i2c_client *client,
 	}
 
 	tpd_load_status = 1;
-#ifdef HUAWEI_EASY_WAKEUP
+#ifdef CONFIG_HUAWEI_EASY_WAKEUP
       core_dev_ptr = &rmi4_data->input_dev->dev;
 #endif 
 	tp_log_info("%s(line %d):exit from synaptics_rmi4_probe normally\n",__func__,__LINE__);
@@ -3600,7 +3600,7 @@ static void synaptics_rmi4_sensor_wake(struct synaptics_rmi4_data *rmi4_data)
 
 	return;
 }
-#ifdef HUAWEI_EASY_WAKEUP
+#ifdef CONFIG_HUAWEI_EASY_WAKEUP
 static void synaptics_put_device_into_easy_wakeup(struct synaptics_rmi4_data *rmi4_data)
 {
 	int retval;
@@ -3852,7 +3852,7 @@ static void synaptics_put_device_into_wake(struct synaptics_rmi4_data *rmi4_data
 	return;
 }
 
-#endif /*HUAWEI_EASY_WAKEUP*/
+#endif /*CONFIG_HUAWEI_EASY_WAKEUP*/
 #endif /*sunlibin_debug*/
 #ifdef CONFIG_HAS_EARLYSUSPEND
  /**
@@ -3880,7 +3880,7 @@ static void synaptics_rmi4_early_suspend(struct early_suspend *h)
 		tp_log_debug("%s: stay_awake = false \n",__func__);
 		rmi4_data->staying_awake = false;
 	}
-#ifdef HUAWEI_EASY_WAKEUP
+#ifdef CONFIG_HUAWEI_EASY_WAKEUP
 		synaptics_put_device_into_sleep(rmi4_data);
           mutex_lock(&wrong_touch_lock);
           off_motion_on=1;
@@ -3933,7 +3933,7 @@ static void synaptics_rmi4_late_resume(struct early_suspend *h)
 	//	synaptics_rmi4_resume(&(rmi4_data->input_dev->dev));
 
 	if (rmi4_data->sensor_sleep == true) {
-#ifdef HUAWEI_EASY_WAKEUP
+#ifdef CONFIG_HUAWEI_EASY_WAKEUP
 	synaptics_put_device_into_wake(rmi4_data);
 #else
 	synaptics_rmi4_sensor_wake(rmi4_data);//sunlibin 11-20
@@ -3984,7 +3984,7 @@ static int synaptics_rmi4_suspend(struct device *dev)
 	}
 	if (!rmi4_data->sensor_sleep) {
 		tp_log_info("%s(line %d):rmi4_data->sensor_sleep is false\n",__func__,__LINE__);
-#ifdef HUAWEI_EASY_WAKEUP
+#ifdef CONFIG_HUAWEI_EASY_WAKEUP
 		synaptics_put_device_into_sleep(rmi4_data);
         mutex_lock(&wrong_touch_lock);
         off_motion_on=1;
@@ -4034,7 +4034,7 @@ static int synaptics_rmi4_resume(struct device *dev)
 		tp_log_info("%s(line %d):rmi4_data->staying_awake is true\n",__func__,__LINE__);
 		return 0;
 	}
-#ifdef HUAWEI_EASY_WAKEUP
+#ifdef CONFIG_HUAWEI_EASY_WAKEUP
 	synaptics_put_device_into_wake(rmi4_data);
 #else
 	synaptics_rmi4_sensor_wake(rmi4_data);//sunlibin 11-20
