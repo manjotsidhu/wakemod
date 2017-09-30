@@ -26,8 +26,8 @@ nocol='\033[0m'
 export ARCH=arm
 export ARCH_MTK_PLATFORM=mt6582
 export CROSS_COMPILE=~/arm-eabi-4.8/bin/arm-eabi-
-export KBUILD_BUILD_USER="Manjot_Sidhu"
-export KBUILD_BUILD_HOST="GODz_Android_Dev"
+export KBUILD_BUILD_USER="manjotsidhu"
+export KBUILD_BUILD_HOST="GAD"
 
 
 compile_kernel ()

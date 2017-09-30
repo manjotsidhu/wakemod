@@ -1472,7 +1472,7 @@ static ssize_t store_register_value(struct device_driver *ddri, char *buf, size_
 	memset(databuf, 0, sizeof(u8)*2);    
 
 	input_value = simple_strtoul(buf, NULL, 16);
-	printk("input_value = 0x%2x \n", input_value);
+	//printk("input_value = 0x%2x \n", input_value);
 
 	if(NULL == obj)
 	{

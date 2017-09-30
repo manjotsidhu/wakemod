@@ -2016,7 +2016,7 @@ long ap3220_ps_operate(void* self, uint32_t command, void* buff_in, int size_in,
 					{
 						if((err = ap3220_enable_ps(obj->client, 1)))
 						{
-							APS_ERR("enable ps fail: %d\n", err); 
+							//APS_ERR("enable ps fail: %d\n", err); 
 							return -1;
 						}
 						set_bit(CMC_BIT_PS, &obj->enable);
@@ -2025,7 +2025,7 @@ long ap3220_ps_operate(void* self, uint32_t command, void* buff_in, int size_in,
 					{
 						if((err = ap3220_enable_ps(obj->client, 0)))
 						{
-							APS_ERR("disable ps fail: %d\n", err); 
+							//APS_ERR("disable ps fail: %d\n", err); 
 							return -1;
 						}
 						clear_bit(CMC_BIT_PS, &obj->enable);
@@ -2099,7 +2099,7 @@ long ap3220_als_operate(void* self, uint32_t command, void* buff_in, int size_in
 					{
 						if((err = ap3220_enable_als(obj->client, 1)))
 						{
-							APS_ERR("enable als fail: %d\n", err); 
+							//APS_ERR("enable als fail: %d\n", err); 
 							return -1;
 						}
 						set_bit(CMC_BIT_ALS, &obj->enable);
@@ -2108,7 +2108,7 @@ long ap3220_als_operate(void* self, uint32_t command, void* buff_in, int size_in
 					{
 						if((err = ap3220_enable_als(obj->client, 0)))
 						{
-							APS_ERR("disable als fail: %d\n", err); 
+							//APS_ERR("disable als fail: %d\n", err); 
 							return -1;
 						}
 						clear_bit(CMC_BIT_ALS, &obj->enable);
