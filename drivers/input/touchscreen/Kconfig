@@ -422,13 +422,12 @@ config TOUCHSCREEN_MTK
 	  Say Y here if you have MediaTek touch panel.
 
 # Touch panel
-config MTK_GT9XX
-        bool "GT9XX for Mediatek package"
+
+
+config MTK_CY8CTMA 
+        bool "CY8CTMA for Mediatek package" 
         default n
 
-config MTK_FT5406
-        bool "FT5406 for Mediatek package"
-        default n
 
 config MTK_MMS134
         bool "MMS134 for Mediatek package"
@@ -467,12 +466,7 @@ config TOUCHSCREEN_MTK_GT9XX_HOTKNOT_SCP
 	bool "GT9XX with SCP for Mediatek package"
 	depends on TOUCHSCREEN_MTK
 
-config MTK_EKTF2K
-        bool "MTK_EKTF2K for Mediatek package"
-        default n
-        
-config MTK_GOODIX9XX
-        bool "MTK_GOODIX9XX for Mediatek package"
+
         default n
 
 config TOUCHSCREEN_HP600

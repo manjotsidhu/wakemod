@@ -71,9 +71,9 @@
 #define TRULY  2
 /* BEGIN PN:SPBB-1278  ,Added by l00184147, 2013/3/8*/
 #define  GIS 4
-/* END PN:SPBB-1278  ,Added by l00184147, 2013/3/8*/
-#define  MUTTO 6
-/* END PN: SPBB-1273   ,Added by F00184246, 2013/3/1*/
+#define  MUTTO 3
+#define  JUNDA 5
+#define  LENS 6
 static const u8 cyttsp4_security_key[] = {
 	0xA5, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD, 0x5A
 };
@@ -988,19 +988,20 @@ static int cyttsp4_upgrade_firmware(struct cyttsp4_device *ttsp,
 	struct device *dev = &ttsp->dev;
 	struct cyttsp4_loader_data *data = dev_get_drvdata(dev);
 	int rc;
+	int i;
 
 	pm_runtime_get_sync(dev);
 
 	rc = cyttsp4_request_exclusive(ttsp, CY_LDR_REQUEST_EXCLUSIVE_TIMEOUT);
 	if (rc < 0)
 		goto exit;
-
+      for(i=0;i<3;i++){
 	rc = _cyttsp4_load_app(ttsp, fw_img, fw_size);
 	/* BEGIN PN:DTS2013031805163,Modified by l00184147, 2013/3/28*/
 	//calibrate the touchpanel compulsory after upgrade the FW
 	if (rc < 0) {
-		dev_err(dev, "%s: Firmware update failed with error code %d\n",
-			__func__, rc);
+		dev_err(dev, "%s: Firmware update failed with error code %d,i=%d\n",
+			__func__, rc,i);
 	} else{
 		if (data->loader_pdata &&
 			(data->loader_pdata->flags & CY_FLAG_AUTO_CALIBRATE)) {
@@ -1020,11 +1021,16 @@ static int cyttsp4_upgrade_firmware(struct cyttsp4_device *ttsp,
     /* BEGIN PN:SPBB-1254  ,Added by F00184246, 2013/2/18*/
         INIT_COMPLETION(data->sysinfo_update);
         cyttsp4_subscribe_attention(ttsp, CY_ATTEN_STARTUP,cyttsp4_sysinfo_attention, 0);
+	  break;
 	}/*completion of the upgrade firmware*/
-    /* END PN:SPBB-1254  ,Modified by F00184246, 2013/2/18*/
-    /* END PN:DTS2013031805163,Modified by l00184147, 2013/3/28*/
-
-	cyttsp4_release_exclusive(ttsp);
+      	}
+	if(2==i)
+	{
+		dev_err(dev, "%s: Firmware update failed \n",__func__);
+	}
+	rc=cyttsp4_release_exclusive(ttsp);
+	if (rc<0)
+		dev_err(dev, "%s: Error on release exclusive r=%d\n",__func__, rc);
 	cyttsp4_request_restart(ttsp, false);
 
 exit:
@@ -1232,11 +1238,12 @@ static int upgrade_firmware_from_builtin(struct cyttsp4_device *ttsp)
 	//board_id=get_hardware_product_version();
 
 	/* BEGIN PN:DTS2013053100307 ,Added by l00184147, 2013/05/31*/
-	if(1/*(board_id & HW_VER_MAIN_MASK) == HW_G750_VER*/)
+	if(1/*(board_id & HW_VER_MAIN_MASK) == HW_H30U_VER*/)
 		{
 		retval = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
-			CY_FW_FILE_G750_NAME, dev, GFP_KERNEL, ttsp,
+			CY_FW_FILE_R300_NAME, dev, GFP_KERNEL, ttsp,
 			_cyttsp4_firmware_cont_builtin);}
+
 	/* END PN:DTS2013053100307 ,Added by l00184147, 2013/05/31*/
 	else
 		{
@@ -1719,7 +1726,10 @@ static char * get_touch_module_name(u8 module_id)
 		/* BEGIN PN:SPBB-1278  ,Added by l00184147, 2013/3/8*/
 		case GIS:
 			return "GIS";
-		/* END PN:SPBB-1278  ,Added by l00184147, 2013/3/8*/	
+		case JUNDA:
+			return "JUNDA";
+		case LENS:
+			return "LENS";
 		
 	       default:
 			return "unknow";
@@ -1789,9 +1799,8 @@ static void cyttsp4_fw_and_config_upgrade(
     pannel_id = data->si->si_ptrs.pcfg->panel_info0;
     module_name = get_touch_module_name(pannel_id);
     sprintf(touch_info,"CYPRESS_TMA463_%s.%d",module_name,(data->si->ttconfig.version&0XFF));
-    dev_info(dev,"%s,%s\n",__func__,touch_info);   
-    //set_id_value(TP_ID, touch_info);
-	/* END PN:DTS2013052500159 ,Modified by l00184147, 2013/5/25*/
+    dev_info(dev,"%s,%s\n",__func__,touch_info);
+
     return;
     /* END PN:SPBB-1273   ,Added by F00184246, 2013/3/1*/
 }

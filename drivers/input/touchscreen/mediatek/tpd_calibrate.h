@@ -12,7 +12,7 @@ extern int tpd_def_calmat[8];
 void tpd_calibrate(int *x, int *y);
 #else
 
-#define tpd_calibrate(x, y)
+#define tpd_calibrate(x,y)
 
 #endif
 

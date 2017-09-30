@@ -76,7 +76,7 @@ static void cyttsp4_report_slot_liftoff(struct cyttsp4_mt_data *md)
 static int cyttsp4_input_register_device(struct input_dev *input, int max_tchs)
 {
 	/* max num slots equals max touches + 1 for hover */
-	input_mt_init_slots(input, max_tchs + 1);//modified by linghai interim because of the input-mt.c change
+	input_mt_init_slots(input, max_tchs + 1,0);//modified by linghai interim because of the input-mt.c change
 	return input_register_device(input);
 }
 

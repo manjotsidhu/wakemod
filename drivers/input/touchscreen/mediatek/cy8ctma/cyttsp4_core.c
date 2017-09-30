@@ -107,10 +107,8 @@ static const u8 ldr_err_app[] = {
 
 /* BEGIN PN: SPBB-1253 ,Modified by l00184147, 2013/2/19*/
 /* BEGIN PN:DTS2013053100307 ,Added by l00184147, 2013/06/17*/
-MODULE_FIRMWARE(CY_FW_FILE_G750_NAME);
-/* END PN:DTS2013053100307 ,Added by l00184147, 2013/06/17*/
-/* END PN: SPBB-1253 ,Modified by l00184147, 2013/2/19*/
 
+MODULE_FIRMWARE(CY_FW_FILE_R300_NAME);
 const char *cy_driver_core_name = CYTTSP4_CORE_NAME;
 const char *cy_driver_core_version = CY_DRIVER_VERSION;
 const char *cy_driver_core_date = CY_DRIVER_DATE;
@@ -173,13 +171,15 @@ struct cyttsp4_core_data {
 #endif
 /* END PN:SPBB-1257 ,Added by l00184147, 2013/2/21*/
 };
-
+unsigned char cyttsp_device_check_ok = 0;
 struct atten_node {
 	struct list_head node;
 	int (*func)(struct cyttsp4_device *);
 	struct cyttsp4_device *ttsp;
 	int mode;
 };
+unsigned long glove_status=0;   //glove status
+static struct cyttsp4_core_data *core_data_status=NULL;
 
 static inline size_t merge_bytes(u8 high, u8 low)
 {
@@ -2620,9 +2620,9 @@ static int cyttsp4_startup_(struct cyttsp4_core_data *cd)
 		
 	  	mt_set_gpio_out(GPIO_CTP_RST_PIN, GPIO_OUT_ZERO); 
 		msleep(100);
-	  	hwPowerDown(MT6323_POWER_LDO_VGP2, "TP");
+	  	hwPowerDown(MT6323_POWER_LDO_VGP3, "TP");
 		msleep(100);
-		hwPowerOn(MT6323_POWER_LDO_VGP2, VOL_1800, "TP");
+		hwPowerOn(MT6323_POWER_LDO_VGP3, VOL_1800, "TP");
 		msleep(100);
 		mt_set_gpio_out(GPIO_CTP_RST_PIN, GPIO_OUT_ONE);  
 		msleep(100);
@@ -3558,6 +3558,7 @@ static int cyttsp4_core_probe(struct cyttsp4_core *core)
 	struct cyttsp4_core_platform_data *pdata = dev_get_platdata(dev);
 	enum cyttsp4_atten_type type;
 	unsigned long irq_flags;
+	struct kobject *properties_kobj;
 	int rc = 0;
 	int err=0;
 
@@ -3578,10 +3579,34 @@ static int cyttsp4_core_probe(struct cyttsp4_core *core)
 		rc = -ENOMEM;
 		goto error_alloc_data_failed;
 	}
+	
+	cd->dev = dev;
+	cd->pdata = pdata;
+	dev_set_drvdata(dev, cd);
+	if (cd->pdata->init) {
+		dev_info(cd->dev, "%s: Init HW\n", __func__);
+		rc = cd->pdata->init(cd->pdata, 1, cd->dev);
+	} else {
+		dev_info(cd->dev, "%s: No HW INIT function\n", __func__);
+		rc = 0;
+	}
+	if (rc < 0)
+		dev_err(cd->dev, "%s: HW Init fail r=%d\n", __func__, rc);
 
-	/* point to core device and init lists */
+	dev_info(cd->dev, "%s: check cypress device exit or not\n", __func__);
 	cd->core = core;
 	mutex_init(&cd->system_lock);
+	rc = cyttsp4_reset_checkout(cd);
+
+	if(rc < 0) {
+		cyttsp_device_check_ok =0;
+		printk("cyttsp_device_check_ok=%d\n",cyttsp_device_check_ok);
+		dev_err(cd->dev, "%s: there is no cypress device!!! rc=%d\n", __func__, rc);
+        goto error_init;
+    }
+	cyttsp_device_check_ok =1;
+	printk("cyttsp_device_check_ok=%d\n",cyttsp_device_check_ok);
+	/* point to core device and init lists */
 	mutex_init(&cd->adap_lock);
 	for (type = 0; type < CY_ATTEN_NUM_ATTEN; type++)
 		INIT_LIST_HEAD(&cd->atten_list[type]);
@@ -3725,7 +3750,7 @@ error_request_irq:
 //error_gpio_irq:
 	destroy_workqueue(cd->startup_work_q);
 	if (pdata->init)
-		pdata->init(pdata, 0, dev);
+		pdata->init(pdata,CYTTSP_NO_OFF, dev);
 error_init:
 	dev_set_drvdata(dev, NULL);
 	kfree(cd);

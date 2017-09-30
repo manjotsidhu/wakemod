@@ -194,7 +194,7 @@ static int cyttsp4_i2c_probe(struct i2c_client *client,
 	ts_i2c->client = client;
 	client->dev.bus = &i2c_bus_type;
 	i2c_set_clientdata(client, ts_i2c);
-	//dev_set_drvdata(&client->dev, ts_i2c);	//MOD BY ZHONG: no need??
+	dev_set_drvdata(&client->dev, ts_i2c);
 
 	if (adap_id)
 		id = adap_id;
@@ -219,7 +219,7 @@ static int cyttsp4_i2c_probe(struct i2c_client *client,
 
 add_adapter_err:
 	pm_runtime_disable(&client->dev);
-	//dev_set_drvdata(&client->dev, NULL);		//MOD BY ZHONG: no need??
+	dev_set_drvdata(&client->dev, NULL);
 	i2c_set_clientdata(client, NULL);
 	kfree(ts_i2c);
 error_alloc_data_failed:

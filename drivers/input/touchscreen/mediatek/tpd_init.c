@@ -1,1 +1,1 @@
-/* dummy file, temporarily for remake */
+// dummy file, temporarily for remake
