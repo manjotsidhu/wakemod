@@ -7,18 +7,16 @@
 #include <linux/types.h>
 #include <linux/seq_file.h>
 #include <linux/list.h>
-#include <linux/proc_fs.h>
+#include <linux/proc_fs.h> 
 
 #include <linux/slab.h>
 
 #include <mach/mt_gpio.h>
-#ifndef CONFIG_ARM64 //MT6795
 #include <mach/mt_reg_base.h>
-#include <mach/irqs.h>
-#endif
-
 #include <mach/mt_typedefs.h>
+
 #include <mach/board.h>
+#include <mach/irqs.h>
 #include <mach/eint.h>
 
 #include <asm/io.h>
@@ -26,18 +24,18 @@
 #include <generated/autoconf.h>
 #include <linux/kobject.h>
 #include <linux/earlysuspend.h>
-/* #include "tpd_custom.h" */
+//#include "tpd_custom.h"
 
 /* debug macros */
-/* //#define TPD_DEBUG */
+////#define TPD_DEBUG
 #define TPD_DEBUG_CODE
-/* #define TPD_DEBUG_TRACK */
-#define TPD_DMESG(a, arg...) printk(TPD_DEVICE ": " a, ##arg)
+//#define TPD_DEBUG_TRACK
+#define TPD_DMESG(a,arg...) printk(TPD_DEVICE ": " a,##arg)
 #if defined(TPD_DEBUG)
 #undef TPD_DEBUG
-#define TPD_DEBUG(a, arg...) printk(TPD_DEVICE ": " a, ##arg)
+#define TPD_DEBUG(a,arg...) printk(TPD_DEVICE ": " a,##arg)
 #else
-#define TPD_DEBUG(arg...)
+#define TPD_DEBUG(arg...) 
 #endif
 
 /* register, address, configurations */
@@ -62,7 +60,7 @@
 #undef TPD_RES_Y
 extern int TPD_RES_X;
 extern int TPD_RES_Y;
-extern int tpd_load_status;	/* 0: failed, 1: sucess */
+extern int tpd_load_status ; //0: failed, 1: sucess
 extern int tpd_mode;
 extern int tpd_mode_axis;
 extern int tpd_mode_min;
@@ -82,43 +80,37 @@ extern int TPD_DO_WARP;
 extern int tpd_wb_start[];
 extern int tpd_wb_end[];
 
-struct tpd_device {
-	struct input_dev *dev;
-	struct input_dev *kpd;
-	struct timer_list timer;
-	struct tasklet_struct tasklet;
-	int btn_state;
+struct tpd_device
+{
+    struct input_dev *dev;
+    struct input_dev *kpd;
+    struct timer_list timer;
+    struct tasklet_struct tasklet;
+    int btn_state;
 };
 
-struct tpd_attrs {
+struct tpd_attrs
+{
 	struct device_attribute **attr;
 	int num;
 };
-struct tpd_driver_t {
-	char *tpd_device_name;
-	int (*tpd_local_init) (void);
-	void (*suspend) (struct early_suspend *h);
-	void (*resume) (struct early_suspend *h);
-	int tpd_have_button;
-	struct tpd_attrs attrs;
-	int (*tpd_get_fw_version)(void);
-    void (*tpd_get_fw_vendor_name)(char * fw_vendor_name);	
-	
-};
-
-struct tpd_filter_t
+struct tpd_driver_t
 {
-	int enable; //0: disable, 1: enable
-	int pixel_density; //XXX pixel/cm
+		char *tpd_device_name;
+		int (*tpd_local_init)(void);
+ 		void (*suspend)(struct early_suspend *h);
+ 		void (*resume)(struct early_suspend *h);
+ 		int tpd_have_button;
+		struct tpd_attrs attrs;
 };
 
-#if 1				/* #ifdef TPD_HAVE_BUTTON */
+#if 1 //#ifdef TPD_HAVE_BUTTON
 void tpd_button(unsigned int x, unsigned int y, unsigned int down);
 void tpd_button_init(void);
 ssize_t tpd_virtual_key(char *buf);
-/* #ifndef TPD_BUTTON_HEIGHT */
-/* #define TPD_BUTTON_HEIGHT TPD_RES_Y */
-/* #endif */
+//#ifndef TPD_BUTTON_HEIGHT
+//#define TPD_BUTTON_HEIGHT TPD_RES_Y
+//#endif
 #endif
 
 #if 0
@@ -150,4 +142,4 @@ extern int tpd_em_pressure_threshold;
 void _tpd_switch_single_mode(void);
 void _tpd_switch_multiple_mode(void);
 void _tpd_switch_sleep_mode(void);
-void _tpd_switch_normal_mode(void);
+void _tpd_switch_normal_mode(void);   

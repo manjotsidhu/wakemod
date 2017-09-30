@@ -119,6 +119,13 @@ struct cyttsp4_core_platform_data {
 	struct touch_settings *sett[CY_TOUCH_SETTINGS_MAX];
 	struct cyttsp4_loader_platform_data *loader_pdata;
 };
+struct hoster_mode {
+	int X0;
+	int X1; 
+	int Y0;
+	int Y1;
+	unsigned long enable;
+	};
 
 #ifdef VERBOSE_DEBUG
 extern void cyttsp4_pr_buf(struct device *dev, u8 *pr_buf, u8 *dptr, int size,
@@ -126,7 +133,9 @@ extern void cyttsp4_pr_buf(struct device *dev, u8 *pr_buf, u8 *dptr, int size,
 #else
 #define cyttsp4_pr_buf(a, b, c, d, e) do { } while (0)
 #endif
-
+#define CYTTSP_OFF 0
+#define CYTTSP_ON 1
+#define CYTTSP_NO_OFF 2
 #endif /* _LINUX_CYTTSP4_CORE_H */
 /* END PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
 /* END PN:DTS2013011401860  ,Modified by l00184147, 2013/1/14*/

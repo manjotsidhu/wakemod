@@ -7,12 +7,12 @@ void tpd_debug_no_response(struct i2c_client *);
 extern int tpd_debug_nr;
 
 #define TPD_DEBUG_CHECK_NO_RESPONSE \
-    if (tpd_debug_nr) { \
-        wait_event_interruptible_timeout(waiter, tpd_flag != 0, HZ/10); \
-        if (tpd_flag == 0) { \
-	    tpd_debug_no_response(i2c_client); \
-	    continue; \
-	} \
+    if(tpd_debug_nr) { \
+        wait_event_interruptible_timeout(waiter,tpd_flag!=0,HZ/10); \
+        if(tpd_flag==0) { \
+            tpd_debug_no_response(i2c_client); \
+            continue; \
+        } \
     } else
 
 
@@ -25,33 +25,33 @@ extern int tpd_down_status;
 
 #define TPD_DEBUG_PRINT_INT                                                 \
     do {                                                                    \
-	if (tpd_debug_time) {                                                \
-	    printk("tp_int\n");                                             \
-	}                                                                   \
-    } while (0)
+        if(tpd_debug_time) {                                                \
+            printk("tp_int\n");                                             \
+        }                                                                   \
+    } while(0)
 
 #define TPD_DEBUG_PRINT_UP                                                  \
     do {                                                                    \
-        if (pending == 0 && tpd_debug_time) {                                  \
-            tpd_down_status = 0;                                              \
-	    printk("up on %ld ms (+%ld ms)\n",                              \
-	       (tpd_last_2_int_time[1] - tpd_last_down_time) / 1000,        \
-	       (tpd_last_2_int_time[1] - tpd_last_2_int_time[0]) / 1000);   \
-	}                                                                   \
-    } while (0)
-
+        if(pending==0 && tpd_debug_time) {                                  \
+            tpd_down_status=0;                                              \
+            printk("up on %ld ms (+%ld ms)\n",                              \
+               (tpd_last_2_int_time[1] - tpd_last_down_time) / 1000,        \
+               (tpd_last_2_int_time[1] - tpd_last_2_int_time[0]) / 1000);   \
+        }                                                                   \
+    } while(0)
+    
 #define TPD_DEBUG_PRINT_DOWN                                                    \
     do {                                                                        \
-	if (tpd_debug_time) {                                                    \
-            if (tpd_down_status == 0) printk("down on 0 ms\n");                    \
-	    else printk("move on %ld ms (+%ld ms)\n",                           \
-		    (tpd_last_2_int_time[1] - tpd_last_down_time) / 1000,       \
-		    (tpd_last_2_int_time[1] - tpd_last_2_int_time[0]) / 1000);  \
-            tpd_down_status = 1;                                                  \
-	}                                                                       \
-    } while (0)
-
-#define TPD_DEBUG_SET_TIME   do { tpd_debug_set_time(); } while (0);
+        if(tpd_debug_time) {                                                    \
+            if(tpd_down_status==0) printk("down on 0 ms\n");                    \
+            else printk("move on %ld ms (+%ld ms)\n",                           \
+                    (tpd_last_2_int_time[1] - tpd_last_down_time) / 1000,       \
+                    (tpd_last_2_int_time[1] - tpd_last_2_int_time[0]) / 1000);  \
+            tpd_down_status=1;                                                  \
+        }                                                                       \
+    } while(0)
+    
+#define TPD_DEBUG_SET_TIME   do { tpd_debug_set_time(); } while(0);
 
 extern int tpd_em_log;
 extern int tpd_em_log_to_fs;
@@ -71,37 +71,37 @@ void tpd_em_log_release(void);
 
 #define TPD_EM_PRINT(raw_x, raw_y, cal_x, cal_y, p, down)                           \
     do {                                                                            \
-	if (tpd_em_log) {                                                           \
-	    if (!tpd_em_log_to_fs) {                                                \
-		tpd_em_log_output(raw_x, raw_y, cal_x, cal_y, p, down);             \
-	    } else {                                                                \
-		tpd_em_log_store(raw_x, raw_y, cal_x, cal_y, p, down);              \
-		tpd_em_log_output(raw_x, raw_y, cal_x, cal_y, p, down);                \
-	    }                                                                       \
-	    if (down == 1)                                                          \
-		tpd_down_status = 1;                                                \
-	    else if (down == 0)                                                     \
-		tpd_down_status = 0;                                                \
-	}                                                                           \
-	else {                                                                      \
-	    if (tpd_em_log_to_fs) {                                                 \
-		tpd_em_log_release();                                               \
-	    }                                                                       \
-	}                                                                           \
-    } while (0)
+        if (tpd_em_log) {                                                           \
+            if (!tpd_em_log_to_fs) {                                                \
+                tpd_em_log_output(raw_x, raw_y, cal_x, cal_y, p, down);             \
+            } else {                                                                \
+                tpd_em_log_store(raw_x, raw_y, cal_x, cal_y, p, down);              \
+                tpd_em_log_output(raw_x, raw_y, cal_x, cal_y, p, down);                \
+            }                                                                       \
+            if (down == 1)                                                          \
+                tpd_down_status = 1;                                                \
+            else if (down == 0)                                                     \
+                tpd_down_status = 0;                                                \
+        }                                                                           \
+        else {                                                                      \
+            if (tpd_em_log_to_fs) {                                                 \
+                tpd_em_log_release();                                               \
+            }                                                                       \
+        }                                                                           \
+    } while(0)
 
 #ifdef TPD_DEBUG_TRACK
 extern void *dal_fb_addr;
 extern int tpd_debug_track;
 void tpd_up_debug_track(int x, int y);
 void tpd_down_debug_track(int x, int y);
-#define TPD_UP_DEBUG_TRACK(x, y) do { if (tpd_debug_track) tpd_up_debug_track(x, y); } while(0)
-#define TPD_DOWN_DEBUG_TRACK(x, y) do { if (tpd_debug_track) tpd_down_debug_track(x, y); } while(0)
+#define TPD_UP_DEBUG_TRACK(x,y) do { if(tpd_debug_track) tpd_up_debug_track(x,y); }while(0)
+#define TPD_DOWN_DEBUG_TRACK(x,y) do { if(tpd_debug_track) tpd_down_debug_track(x,y); }while(0)
 
-#endif				/* TPD_DEBUG_TRACK */
-#endif				/* TPD_DEBUG_CODE */
+#endif // TPD_DEBUG_TRACK
+#endif // TPD_DEBUG_CODE
 
-/* Macros that will be embedded in code */
+// Macros that will be embedded in code
 
 #ifndef TPD_DEBUG_CHECK_NO_RESPONSE
 #define TPD_DEBUG_CHECK_NO_RESPONSE
@@ -120,12 +120,12 @@ void tpd_down_debug_track(int x, int y);
 #endif
 
 #ifndef TPD_UP_DEBUG_TRACK
-#define TPD_UP_DEBUG_TRACK(x, y)
+#define TPD_UP_DEBUG_TRACK(x,y)
 #endif
 
 #ifndef TPD_DOWN_DEBUG_TRACK
-#define TPD_DOWN_DEBUG_TRACK(x, y)
+#define TPD_DOWN_DEBUG_TRACK(x,y)
 #endif
 
 
-#endif				/* TPD_DEBUG_H */
+#endif // TPD_DEBUG_H

@@ -121,3 +121,7 @@ ifeq ($(CONFIG_MTK_EKTF2K),y)
 obj-y	+=  ektf2k/
 endif
 
+
+ifeq ($(CONFIG_MTK_CY8CTMA),y)
+obj-y	+=  cy8ctma/
+endif

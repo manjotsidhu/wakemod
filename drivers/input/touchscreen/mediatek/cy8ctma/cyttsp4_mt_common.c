@@ -140,6 +140,7 @@ static void cyttsp4_get_mt_touches(struct cyttsp4_mt_data *md, int num_cur_tch)
   int ids[max(CY_TMA1036_MAX_TCH + 1,
 			  CY_TMA4XX_MAX_TCH + 1)]; /* add one for hover */
   int mt_sync_count = 0;
+  bool flag_exten = false; 
 
   memset(ids, 0, (si->si_ofs.max_tchs + 1) * sizeof(int));
   memset(&tch, 0, sizeof(struct cyttsp4_touch));

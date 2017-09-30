@@ -39,10 +39,11 @@
 
 /* BEGIN PN: SPBB-1253 ,Modified by l00184147, 2013/2/19*/
 /* BEGIN PN:DTS2013053100307 ,Added by l00184147, 2013/05/31*/
-#define CY_FW_FILE_G750_NAME "HUAWEI_G750.bin"
+
 /* END PN:DTS2013053100307 ,Added by l00184147, 2013/05/31*/
-#define CY_FW_FILE_G610_NAME "HUAWEI_G610.bin"
-/* END PN: SPBB-1253 ,Modified by l00184147, 2013/2/19*/
+
+
+#define CY_FW_FILE_R300_NAME "HUAWEI_R300.bin"
 
 #define CY_MAX_PRBUF_SIZE           PIPE_BUF
 #define CY_PR_TRUNCATED             " truncated..."
@@ -102,7 +103,7 @@ enum cyttsp4_ic_ebid {
 #define IS_BAD_PKT(x)               ((x) & 0x20)
 
 /* Timeout in ms. */
-#define CY_COMMAND_COMPLETE_TIMEOUT	500
+#define CY_COMMAND_COMPLETE_TIMEOUT	3000
 #define CY_WATCHDOG_TIMEOUT		1000
 
 /* drv_debug commands */
@@ -345,7 +346,10 @@ enum cyttsp4_ic_grpnum {
 
 #define CY_VKEYS_X 720
 #define CY_VKEYS_Y 1280
-/* BEGIN PN:DTS2013031401505  ,Added by F00184246, 2013/3/14*/
+#define CY_VKEYS_FHD_X 1080
+#define CY_VKEYS_FHD_Y 1920
+#define CY_VKEYS_QHD_X 540
+#define CY_VKEYS_QHD_Y 960
 #define CY_G610_NOVKEYS_X 540
 #define CY_G610_NOVKEYS_Y 960
 /* END PN:DTS2013031401505  ,Added by F00184246, 2013/3/14*/

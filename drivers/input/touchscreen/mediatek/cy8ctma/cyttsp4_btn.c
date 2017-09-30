@@ -284,14 +284,13 @@ void cyttsp4_btn_close(struct input_dev *input)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-	/* BEGIN PN:DTS2013041400018 ,Deleted by l00184147, 2013/4/12*/
-	/* END PN:DTS2013041400018  ,Deleted by l00184147, 2013/4/12*/
+	
+	//Do not to execute cyttsp4_unsubscribe_attention func to avoid NULL pointer error when shutdown 
+	//cyttsp4_unsubscribe_attention(ttsp, CY_ATTEN_IRQ,
+	//	cyttsp4_btn_attention, CY_MODE_OPERATIONAL);
 
-	cyttsp4_unsubscribe_attention(ttsp, CY_ATTEN_IRQ,
-		cyttsp4_btn_attention, CY_MODE_OPERATIONAL);
-
-	cyttsp4_unsubscribe_attention(ttsp, CY_ATTEN_STARTUP,
-		cyttsp4_startup_attention, 0);
+	//cyttsp4_unsubscribe_attention(ttsp, CY_ATTEN_STARTUP,
+	//	cyttsp4_startup_attention, 0);
 
 	pm_runtime_put(dev);
 }
