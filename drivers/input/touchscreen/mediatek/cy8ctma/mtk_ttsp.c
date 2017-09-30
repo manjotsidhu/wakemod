@@ -194,9 +194,38 @@ static int cyttsp4_xres(struct cyttsp4_core_platform_data *pdata,
   
   return rc;
 }
+static ssize_t g750_cyttps4_virtualkeys_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf,
+		__stringify(EV_KEY) ":"
+		__stringify(KEY_BACK) ":145:1340:140:100"
+		":" __stringify(EV_KEY) ":"
+		__stringify(KEY_HOMEPAGE) ":360:1340:100:100"
+		":" __stringify(EV_KEY) ":"
+		__stringify(KEY_MENU) ":580:1340:130:100"
+		"\n");
+}
 
-//add begin by linghai
-/* BEGIN PN:DTS2013020108492  ,Modified by l00184147, 2013/1/26*/ 
+
+static struct kobj_attribute g750_cyttsp4_virtualkeys_attr = {
+	.attr = {		
+        	.name = "virtualkeys.mtk-tpd",
+		//.name = "virtualkeys.cyttsp4_mt",
+		.mode = S_IRUGO,
+	},
+	.show = &g750_cyttps4_virtualkeys_show,
+};
+
+static struct attribute *g750_cyttsp4_properties_attrs[] = {
+	&g750_cyttsp4_virtualkeys_attr.attr,
+	NULL
+};
+
+static struct attribute_group g750_cyttsp4_properties_attr_group = {
+	.attrs = g750_cyttsp4_properties_attrs,
+};
+
 static ssize_t h30_cyttps4_virtualkeys_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -337,7 +366,6 @@ static int cyttsp4_init(struct cyttsp4_core_platform_data *pdata,
 			if (properties_kobj)
 			ret = sysfs_create_group(properties_kobj,
 					&h30_cyttsp4_properties_attr_group);
-
 			if (!properties_kobj || ret)
 			pr_err("%s: failed to create board_properties\n", __func__);
 		}
@@ -473,7 +501,135 @@ static struct touch_settings cyttsp4_sett_param_size = {
 
 
 
-/* BEGIN PN:DTS2013053100307 ,Added by l00184147, 2013/05/31*/
+#include "Ofilm_G750_config.h"
+static struct touch_settings cyttsp4_G750_sett_ofilm_param_regs = {
+       .data = (uint8_t *)&cyttsp4_G750_ofilm_param_regs[0],
+       .size = ARRAY_SIZE(cyttsp4_G750_ofilm_param_regs),
+       .tag = 0,
+};
+
+#include "Truely_G750_config.h"
+static struct touch_settings cyttsp4_G750_sett_truly_param_regs = {
+       .data = (uint8_t *)&cyttsp4_G750_truly_param_regs[0],
+       .size = ARRAY_SIZE(cyttsp4_G750_truly_param_regs),
+       .tag = 0,
+};
+
+struct cyttsp4_sett_param_map cyttsp4_G750_config_param_map[] = {
+    
+	[0] = {
+			  .id = 0,
+			  .param = &cyttsp4_G750_sett_ofilm_param_regs,
+		  },
+	
+	[1] = {
+			  .id = 2,
+			  .param = &cyttsp4_G750_sett_truly_param_regs,
+		  },
+       [2] = {
+			  .param = NULL,
+		  },
+		  
+};
+
+static struct cyttsp4_loader_platform_data _cyttsp4_G750_loader_platform_data = {
+	.fw = &cyttsp4_firmware,
+	.param_regs = &cyttsp4_sett_param_regs,
+	.param_size = &cyttsp4_sett_param_size,
+	.param_map =cyttsp4_G750_config_param_map,  
+	.flags = 1,
+};
+
+static struct cyttsp4_core_platform_data _cyttsp4_G750_core_platform_data = {
+	.irq_gpio = CYTTSP4_I2C_IRQ_GPIO,
+	.use_configure_sensitivity = 1,
+	.xres = cyttsp4_xres,
+	.init = cyttsp4_init,
+	.power = cyttsp4_power,
+	.sett = {
+		NULL,	/* Reserved */
+		NULL,	/* Command Registers */
+		NULL,	/* Touch Report */
+		NULL,	/* Cypress Data Record */
+		NULL,	/* Test Record */
+		NULL,	/* Panel Configuration Record */
+		NULL, /* &cyttsp4_sett_param_regs, */
+		NULL, /* &cyttsp4_sett_param_size, */
+		NULL,	/* Reserved */
+		NULL,	/* Reserved */
+		NULL,	/* Operational Configuration Record */
+		NULL, /* &cyttsp4_sett_ddata, *//* Design Data Record */
+		NULL, /* &cyttsp4_sett_mdata, *//* Manufacturing Data Record */
+		NULL,	/* Config and Test Registers */
+		&cyttsp4_sett_btn_keys,	/* button-to-keycode table */
+	},
+	.loader_pdata = & _cyttsp4_G750_loader_platform_data,
+};
+
+#include "Ofilm_G750T20_config.h"
+static struct touch_settings cyttsp4_G750T20_sett_ofilm_param_regs = {
+       .data = (uint8_t *)&cyttsp4_G750T20_ofilm_param_regs[0],
+       .size = ARRAY_SIZE(cyttsp4_G750T20_ofilm_param_regs),
+       .tag = 0,
+};
+
+#include "Truely_G750T20_config.h"
+static struct touch_settings cyttsp4_G750T20_sett_truly_param_regs = {
+       .data = (uint8_t *)&cyttsp4_G750T20_truly_param_regs[0],
+       .size = ARRAY_SIZE(cyttsp4_G750T20_truly_param_regs),
+       .tag = 0,
+};
+
+struct cyttsp4_sett_param_map cyttsp4_G750T20_config_param_map[] = {
+    
+	[0] = {
+			  .id = 0,
+			  .param = &cyttsp4_G750T20_sett_ofilm_param_regs,
+		  },
+	
+	[1] = {
+			  .id = 2,
+			  .param = &cyttsp4_G750T20_sett_truly_param_regs,
+		  },
+       [2] = {
+			  .param = NULL,
+		  },
+		  
+};
+
+static struct cyttsp4_loader_platform_data _cyttsp4_G750T20_loader_platform_data = {
+	.fw = &cyttsp4_firmware,
+	.param_regs = &cyttsp4_sett_param_regs,
+	.param_size = &cyttsp4_sett_param_size,
+	.param_map =cyttsp4_G750T20_config_param_map,  
+	.flags = 1,
+};
+
+static struct cyttsp4_core_platform_data _cyttsp4_G750T20_core_platform_data = {
+	.irq_gpio = CYTTSP4_I2C_IRQ_GPIO,
+	.use_configure_sensitivity = 1,
+	.xres = cyttsp4_xres,
+	.init = cyttsp4_init,
+	.power = cyttsp4_power,
+	.sett = {
+		NULL,	/* Reserved */
+		NULL,	/* Command Registers */
+		NULL,	/* Touch Report */
+		NULL,	/* Cypress Data Record */
+		NULL,	/* Test Record */
+		NULL,	/* Panel Configuration Record */
+		NULL, /* &cyttsp4_sett_param_regs, */
+		NULL, /* &cyttsp4_sett_param_size, */
+		NULL,	/* Reserved */
+		NULL,	/* Reserved */
+		NULL,	/* Operational Configuration Record */
+		NULL, /* &cyttsp4_sett_ddata, *//* Design Data Record */
+		NULL, /* &cyttsp4_sett_mdata, *//* Manufacturing Data Record */
+		NULL,	/* Config and Test Registers */
+		&cyttsp4_sett_btn_keys,	/* button-to-keycode table */
+	},
+	.loader_pdata = & _cyttsp4_G750T20_loader_platform_data,
+};
 #include "Ofilm_R300_config.h"
 static struct touch_settings cyttsp4_R300_sett_ofilm_param_regs = {
        .data = (uint8_t *)&cyttsp4_R300_ofilm_param_regs[0],
@@ -535,6 +691,69 @@ static struct cyttsp4_core_platform_data _cyttsp4_R300_core_platform_data = {
 	},
 	.loader_pdata = & _cyttsp4_R300_loader_platform_data,
 };
+#include "Ofilm_G6_config.h"
+static struct touch_settings cyttsp4_G6_sett_ofilm_param_regs = {
+       .data = (uint8_t *)&cyttsp4_G6_ofilm_param_regs[0],
+       .size = ARRAY_SIZE(cyttsp4_G6_ofilm_param_regs),
+       .tag = 0,
+};
+
+#include "Truely_G6_config.h"
+static struct touch_settings cyttsp4_G6_sett_truly_param_regs = {
+       .data = (uint8_t *)&cyttsp4_G6_truly_param_regs[0],
+       .size = ARRAY_SIZE(cyttsp4_G6_truly_param_regs),
+       .tag = 0,
+};
+
+struct cyttsp4_sett_param_map cyttsp4_G6_config_param_map[] = {
+    
+	[0] = {
+			  .id = 0,
+			  .param = &cyttsp4_G6_sett_ofilm_param_regs,
+		  },
+	
+	[1] = {
+			  .id = 2,
+			  .param = &cyttsp4_G6_sett_truly_param_regs,
+		  },
+       [2] = {
+			  .param = NULL,
+		  },
+		  
+};
+static struct cyttsp4_loader_platform_data _cyttsp4_G6_loader_platform_data = {
+	.fw = &cyttsp4_firmware,
+	.param_regs = &cyttsp4_sett_param_regs,
+	.param_size = &cyttsp4_sett_param_size,
+	.param_map =cyttsp4_G6_config_param_map,  
+	.flags = 1,
+};
+
+static struct cyttsp4_core_platform_data _cyttsp4_G6_core_platform_data = {
+	.irq_gpio = CYTTSP4_I2C_IRQ_GPIO,
+	.use_configure_sensitivity = 1,
+	.xres = cyttsp4_xres,
+	.init = cyttsp4_init,
+	.power = cyttsp4_power,
+	.sett = {
+		NULL,	/* Reserved */
+		NULL,	/* Command Registers */
+		NULL,	/* Touch Report */
+		NULL,	/* Cypress Data Record */
+		NULL,	/* Test Record */
+		NULL,	/* Panel Configuration Record */
+		NULL, /* &cyttsp4_sett_param_regs, */
+		NULL, /* &cyttsp4_sett_param_size, */ 
+		NULL,	/* Reserved */
+		NULL,	/* Reserved */
+		NULL,	/* Operational Configuration Record */
+		NULL, /* &cyttsp4_sett_ddata, *//* Design Data Record */
+		NULL, /* &cyttsp4_sett_mdata, *//* Manufacturing Data Record */
+		NULL,	/* Config and Test Registers */
+		&cyttsp4_sett_btn_keys,	/* button-to-keycode table */
+	},
+	.loader_pdata = & _cyttsp4_G6_loader_platform_data,
+};
 #define CY_MAXX 880
 #define CY_MAXY 1280
 #define CY_MINX 0
@@ -585,15 +804,31 @@ static struct i2c_board_info mtk_ttsp_i2c_tpd=
 		.platform_data = CYTTSP4_I2C_NAME,
 };
 
+struct cyttsp4_core_info cyttsp4_G750_core_info = {
+	.name = CYTTSP4_CORE_NAME,
+	.id = "main_ttsp_core",
+	.adap_id = CYTTSP4_I2C_NAME,
+	.platform_data = &_cyttsp4_G750_core_platform_data,
+};
 
+struct cyttsp4_core_info cyttsp4_G750T20_core_info = {
+	.name = CYTTSP4_CORE_NAME,
+	.id = "main_ttsp_core",
+	.adap_id = CYTTSP4_I2C_NAME,
+	.platform_data = &_cyttsp4_G750T20_core_platform_data,
+};
 
-
-/* BEGIN PN: DTS2013021602307 ,Modified by l00184147, 2013/2/16*/
 struct cyttsp4_core_info cyttsp4_R300_core_info = {
 	.name = CYTTSP4_CORE_NAME,
 	.id = "main_ttsp_core",
 	.adap_id = CYTTSP4_I2C_NAME,
 	.platform_data = &_cyttsp4_R300_core_platform_data,
+};
+ struct cyttsp4_core_info cyttsp4_G6_core_info = {
+	.name = CYTTSP4_CORE_NAME,
+	.id = "main_ttsp_core",
+	.adap_id = CYTTSP4_I2C_NAME,
+	.platform_data = &_cyttsp4_G6_core_platform_data,
 };
 static struct cyttsp4_mt_platform_data _cyttsp4_mt_virtualkey_platform_data = {
 	.frmwrk = &cyttsp4_framework,

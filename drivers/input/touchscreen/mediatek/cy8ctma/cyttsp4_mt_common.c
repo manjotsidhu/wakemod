@@ -34,6 +34,9 @@
 
 #include "cyttsp4_mt_common.h"
 
+struct hoster_mode tp_hoster={0,0,0,0,0};
+extern int set_signal_disparity(unsigned long status);
+extern unsigned long glove_status;
 static void cyttsp4_lift_all(struct cyttsp4_mt_data *md)
 {
   /* BEGIN PN:DTS2013041400018 ,Added by l00184147, 2013/4/12*/
@@ -160,7 +163,16 @@ static void cyttsp4_get_mt_touches(struct cyttsp4_mt_data *md, int num_cur_tch)
 	  mt_sync_count++;
 	  continue;
 	}
+	if(1==tp_hoster.enable)
+	{
+       	if((tch.abs[CY_TCH_X]<tp_hoster.X0) ||(tch.abs[CY_TCH_X]>tp_hoster.X1) ||(tch.abs[CY_TCH_Y]<tp_hoster.Y0) ||(tch.abs[CY_TCH_Y]>tp_hoster.Y1))
+       	{
+			dev_dbg(dev,"point is external.\n");
+			continue;
+       	}
 
+	 	flag_exten=true;
+	}
 	/*
 	 * if any touch is hover, then there is only one touch
 	 * so it is OK to check the first touch for hover condition
@@ -248,7 +260,16 @@ static void cyttsp4_get_mt_touches(struct cyttsp4_mt_data *md, int num_cur_tch)
 			  tch.abs[CY_TCH_P],
 			  tch.abs[CY_TCH_E]);
   }
-
+  if(1==tp_hoster.enable)
+  {	if(!flag_exten)
+  	{
+		dev_dbg(dev,"release all point\n");
+		md->num_prv_tch = num_cur_tch;
+       	md->prv_tch_type = tch.abs[CY_TCH_O];
+		cyttsp4_lift_all(md);
+		return;
+  	}
+  }
   if (md->mt_function.final_sync)
 	md->mt_function.final_sync(md->input, si->si_ofs.max_tchs,
 							   mt_sync_count, ids);
@@ -667,7 +688,56 @@ int cyttsp4_mt_release(struct cyttsp4_device *ttsp)
 	kfree(md);
 	return 0;
 }
+static ssize_t tp_holster_mode_store(struct device *dev, struct device_attribute *attr, char *buf, size_t count)
+{
+	int value;
+	int x0, y0, x1, y1;
+	int error = count;
+	dev_err(dev, "%s: enter function\n",__func__);
+	if (dev == NULL) {
+		dev_err(dev, "%s: dev is null\n",__func__);
+		error = -EINVAL;
+		goto out;
+	}
 
+	error = sscanf(buf, "%u %u %u %u %u",&value, &x0, &y0, &x1, &y1);
+	if (!error) {
+		dev_err(dev, "%s: sscanf return invaild :%d\n",__func__,error);
+		error = -EINVAL;
+		goto out;
+	}
+	tp_hoster.X0=x0;
+	tp_hoster.X1=x1;
+	tp_hoster.Y0=y0;
+	tp_hoster.Y1=y1;
+	tp_hoster.enable=value;
+	dev_err(dev, "%s: tp_hoster.X0= :%d, tp_hoster.Y0= :%d,tp_hoster.X1= :%d,tp_hoster.Y1= :%d,tp_hoster.enable=:%lu\n",__func__,tp_hoster.X0,tp_hoster.Y0,tp_hoster.X1,tp_hoster.Y1,tp_hoster.enable);
+
+	if(1==tp_hoster.enable)
+	{
+		error=set_signal_disparity(tp_hoster.enable);
+		if (error < 0) 
+		{
+			dev_err(dev, "%s: Error,set signal_disparity when write note \n", __func__);
+			goto out;
+		}
+	}
+	else
+	{
+		error=set_signal_disparity(glove_status);
+		if (error < 0) 
+		{
+			dev_err(dev, "%s: Error,set signal_disparity when write note \n", __func__);
+			goto out;
+		}
+	}
+	
+	error = count;
+
+out:
+	return error;
+}
+static DEVICE_ATTR(touch_holster, 0664,NULL, tp_holster_mode_store);
 static int cyttsp4_mt_probe(struct cyttsp4_device *ttsp)
 {
 	struct device *dev = &ttsp->dev;
@@ -691,7 +761,12 @@ static int cyttsp4_mt_probe(struct cyttsp4_device *ttsp)
 		rc = -ENOMEM;
 		goto error_alloc_data_failed;
 	}
-
+	rc = device_create_file(dev, &dev_attr_touch_holster);
+	if (rc) {
+		dev_err(dev, "%s: Error, could not create fw_calibration\n",
+				__func__);
+		
+	}
 	cyttsp4_init_function_ptrs(md);
 
 	/* BEGIN PN:DTS2013041400018 ,Added by l00184147, 2013/4/12*/

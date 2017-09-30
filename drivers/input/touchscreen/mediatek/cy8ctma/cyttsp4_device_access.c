@@ -1238,12 +1238,14 @@ static int cyttsp4_grpdata_store_tthe_test_regs(struct device *dev, u8 *ic_buf,
 			if (rc < 0)
 				dev_err(dev, "%s: %s r=%d\n", __func__,
 						"Fail test cmd handshake", rc);
+			break;
 		case CY_NULL_CMD_LOW_POWER:
 			dev_vdbg(dev, "%s: try null cmd low power\n", __func__);
 			rc = _cyttsp4_cmd_toggle_lowpower(dad);
 			if (rc < 0)
 				dev_err(dev, "%s: %s r=%d\n", __func__,
 					"Fail test cmd toggle low power", rc);
+			break;
 		default:
 			break;
 		}
@@ -1730,23 +1732,20 @@ static int out_of_range(enum check_data_type type, int value)
 			switch(type)
 			{
 				case CY_CHK_MUT_RAW:
-					/* BEGIN PN:DTS2013071007839 ,Modified by l00184147, 2013/7/11*/
 				if(value < -3000 || value > -1200)
-					/* END PN:DTS2013071007839 ,Modified by l00184147, 2013/7/11*/ 
-					{
-						return 1;
-					}
-					break;
-				case CY_CHK_SELF_RAW:
-					/* BEGIN PN:DTS2013071007839 ,Modified by l00184147, 2013/7/11*/ 
+				{
+					return 1;
+				}
+				break;
+			case CY_CHK_SELF_RAW:
 				if(value < -600 || value > 1300)
-					/* END PN:DTS2013071007839 ,Modified by l00184147, 2013/7/11*/ 
-					{
-						return 1;
-					}
-					break;
-				default:
+				{
+					return 1;
+				}
+				break;
+			default:
 				return 0;
+	
 			}
 		}
 	return 0;
@@ -1985,31 +1984,31 @@ static int cyttsp4_check_raw_data(struct device *dev)
 	
 	if(1/*(board_id & HW_VER_MAIN_MASK) == HW_H30U_VER*/)
 		{
+			rc = _cyttsp4_exec_scan_cmd(dev);
+				if (rc < 0){
+					return 0;
+			}
 			for(i = 0; i < 2; ++i){
-   				if(0 == i)
-				{	
+				if(0 == i)
+				{
 					type = CY_CHK_MUT_RAW;
 					dad->heatmap.numElement = 312;
 					dad->heatmap.dataType = CY_MUT_RAW;
 				}
 				else if(1==i)
-				{	
+				{
 					type = CY_CHK_SELF_RAW;
 					dad->heatmap.numElement = 13;
 					dad->heatmap.dataType = CY_SELF_RAW;
 				}
-				/* Start scan */
-				rc = _cyttsp4_exec_scan_cmd(dev);
-				if (rc < 0){
-					return 0;
-				}
+
 				/* retrieve scan data */
 				rc = cyttsp4_get_data_and_check(dev,  _cyttsp4_ret_scan_data_cmd, type, CY_CMD_IN_DATA_OFFSET_VALUE);
 				if(rc < 0)
-				{	
+				{
 					return -1;
 				}
-   			}
+			}
 		}
 	printk("%s:rc = %d\n", __func__, rc);
    return rc;
@@ -2153,15 +2152,6 @@ int  cyttsp4_get_panel_data_check(char **buf)
 	if(rc <= 0){	
 		goto cyttsp4_get_panel_data_show_err_release;
 	}
-
-	rc= cyttsp4_release_exclusive(dad->ttsp);
-       if (rc< 0) {
-	   	rc = 0;//use this to justify what to output to the user-space buf
-       	dev_err(dev, "%s: Error on release exclusive r=%d\n",
-                                     __func__, rc);
-             	goto exit;
-	}
-
 	/*set group number to 13*/
 	rc = cyttsp4_ic_grpnum_store(dev, NULL, grpnum_selftest, strlen(grpnum_selftest));
 	if (rc < 0) {
