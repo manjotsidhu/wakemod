@@ -1545,6 +1545,35 @@ static struct platform_device charger_ic_i2c_dev = {
 #endif
 
 /*=======================================================================*/
+#if defined(CONFIG_HW_HAVE_TP_THREAD)
+/******************************************************************************
+Function:       // HW_TP_Init
+  Description:    // TP init function
+  Input:          //product type
+  Output:         // init success or fail
+  Return:         //0 or 1
+  Others:
+******************************************************************************/
+#include "cyttsp4_bus.h"
+extern struct cyttsp4_device_info cyttsp4_mt_virtualkey_info;
+extern struct cyttsp4_core_info cyttsp4_R300_core_info;
+extern struct cyttsp4_core_info cyttsp4_G6_core_info;
+int HW_TP_Init(void)
+{
+    int retval = 0;
+
+    printk("-- HW_TP_Init Begin --\n");
+
+		cyttsp4_register_device(&cyttsp4_mt_virtualkey_info);
+		cyttsp4_register_core_device(&cyttsp4_R300_core_info);
+
+    retval = platform_device_register(&mtk_tpd_dev);
+    printk("-- HW_TP_Init.End --\n");
+    return retval;
+}
+#endif
+
+/*=======================================================================*/
 /* MT6589 Board Device Initialization                                    */
 /*=======================================================================*/
 __init int mt_board_init(void)
