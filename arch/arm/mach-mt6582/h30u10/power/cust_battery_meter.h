@@ -35,15 +35,15 @@
 #define FG_METER_RESISTANCE 	0
 
 /* Qmax for battery  */
-#define Q_MAX_POS_50	1399
-#define Q_MAX_POS_25	1499
-#define Q_MAX_POS_0		1377
-#define Q_MAX_NEG_10	1237
+#define Q_MAX_POS_50	2250
+#define Q_MAX_POS_25	2250
+#define Q_MAX_POS_0		2250
+#define Q_MAX_NEG_10	2250
 
-#define Q_MAX_POS_50_H_CURRENT	1377
-#define Q_MAX_POS_25_H_CURRENT	1473
-#define Q_MAX_POS_0_H_CURRENT	1247
-#define Q_MAX_NEG_10_H_CURRENT	819
+#define Q_MAX_POS_50_H_CURRENT	2250
+#define Q_MAX_POS_25_H_CURRENT	2250
+#define Q_MAX_POS_0_H_CURRENT	2250
+#define Q_MAX_NEG_10_H_CURRENT	2250
 
 
 /* Discharge Percentage */
@@ -52,16 +52,10 @@
 
 /* battery meter parameter */
 #define CUST_TRACKING_POINT  14
-#define CUST_HW_CC 		    0
+#define CUST_R_SENSE         68
+#define CUST_HW_CC           0
 #define AGING_TUNING_VALUE   103
 #define CUST_R_FG_OFFSET    0
-#ifdef CONFIG_MTK_FAN5405_SUPPORT
-#define CUST_R_SENSE         82
-#elif defined(CONFIG_MTK_BQ24158_SUPPORT)
-#define CUST_R_SENSE         68
-#else
-#define CUST_R_SENSE         200
-#endif
 
 #define OCV_BOARD_COMPESATE	0 //mV 
 #define R_FG_BOARD_BASE		1000

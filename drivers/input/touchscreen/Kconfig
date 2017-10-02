@@ -428,6 +428,9 @@ config MTK_CY8CTMA
         bool "CY8CTMA for Mediatek package" 
         default n
 
+config MTK_S7020_NEW
+        bool "S7020_NEW for Mediatek package" 
+        default n
 
 config MTK_MMS134
         bool "MMS134 for Mediatek package"

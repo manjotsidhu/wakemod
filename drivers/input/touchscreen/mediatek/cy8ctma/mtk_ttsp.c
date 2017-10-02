@@ -35,7 +35,7 @@
 #include <mach/mt_typedefs.h>
 #include <linux/input.h>
 #include <mach/mt_pm_ldo.h>
-#ifdef HW_HAVE_TP_THREAD
+#ifdef CONFIG_HW_HAVE_TP_THREAD
 #include <mach/pmic_mt6323_sw.h>
 #endif
 #include <mach/eint.h>
@@ -353,7 +353,7 @@ static int cyttsp4_init(struct cyttsp4_core_platform_data *pdata,
 
 		if(1/*(board_id & HW_VER_MAIN_MASK) == HW_H30U_VER*/)
 		{
-#ifdef HW_HAVE_TP_THREAD		//for HUAWEI
+#ifdef CONFIG_HW_HAVE_TP_THREAD		//for HUAWEI
 			//increasing VGP2 to 1.85, please help to measure it from HW
 			hwPowerOn(MT6323_POWER_LDO_VGP1, VOL_2800, "TP");
 			hwPowerOn(MT6323_POWER_LDO_VGP3, VOL_1800, "TP");
