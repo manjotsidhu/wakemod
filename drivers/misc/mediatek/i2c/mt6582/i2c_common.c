@@ -398,7 +398,7 @@ static DEVICE_ATTR(ut, 660, show_config, set_config);
 static int __init i2c_common_probe(struct platform_device *pdev)
 {
   int ret = 0;
-  //your code here£¬your should save client in your own way
+  //your code hereï¿½ï¿½your should save client in your own way
   printk(KERN_ALERT"i2c_common device probe\n");
   ret = device_create_file(&pdev->dev, &dev_attr_ut);
   return ret;
@@ -448,4 +448,5 @@ module_exit( xxx_exit);
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("MediaTek I2C Bus Driver Test Driver");
 MODULE_AUTHOR("Ranran Lu");
+
 

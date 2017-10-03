@@ -226,3 +226,4 @@ U32 i2c_readl(mt_i2c * i2c, U8 offset);
 
 
 #endif /* __MT_I2C_H__ */
+

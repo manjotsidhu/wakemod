@@ -27,7 +27,7 @@
 #include <linux/firmware.h>
 #include "synaptics_dsx.h"
 #include "synaptics_dsx_i2c.h"
-//#include <linux/hardware_self_adapt.h>
+#include <linux/hardware_self_adapt.h>
 #include <mach/mt_boot.h>
 static char touch_info[50] = {0};
 char *get_module_name(void);

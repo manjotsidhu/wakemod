@@ -51,7 +51,7 @@
 #include "cyttsp4_device_access.h"
 #include "cyttsp4_regs.h"
 /* BEGIN PN:DTS2013061703557 ,Added by l00184147, 2013/6/17*/
-//#include <linux/hardware_self_adapt.h>
+#include <linux/hardware_self_adapt.h>
 /* END PN:DTS2013061703557 ,Added by l00184147, 2013/6/17*/
 
 #define CY_MAX_CONFIG_BYTES    256
@@ -1712,22 +1712,38 @@ static void record_tp_capacitance(enum check_data_type type, int value)
 	sprintf(buf, "%d\t", value);
 	strcat(g_touch_capacitance, buf);
 	g_capacitance_count++;
-	if(0 == g_capacitance_count % 13)
+	hw_product_type board_id;
+	board_id=get_hardware_product_version();
+	if((board_id & HW_VER_MAIN_MASK) == HW_G6T_VER)
+		{
+			if(0 == g_capacitance_count % 21)
+			{
+				strcat(g_touch_capacitance, "\n");
+			}
+		}
+	else if (((board_id & HW_VER_MAIN_MASK) == HW_H30T_VER) || ((board_id & HW_VER_MAIN_MASK) == HW_H30U_VER))
+		{
+			if(0 == g_capacitance_count % 13)
+			{
+				strcat(g_touch_capacitance, "\n");
+			}
+		}
+	else
 	{
-		strcat(g_touch_capacitance, "\n");
+		if(0 == g_capacitance_count % 28)
+		{
+			strcat(g_touch_capacitance, "\n");
+		}
 	}
-
 	return;
 }
 /* END PN:DTS2013062405322 ,Added by l00184147, 2013/6/24*/
 static int out_of_range(enum check_data_type type, int value)
 {
-	//hw_product_type board_id;
-	//board_id=get_hardware_product_version();
-	/* BEGIN PN:DTS2013062405322 ,Added by l00184147, 2013/6/24*/
+	hw_product_type board_id;
+	board_id=get_hardware_product_version();
 	record_tp_capacitance(type, value);
-	/* END PN:DTS2013062405322 ,Added by l00184147, 2013/6/24*/
-	if(1/*(board_id & HW_VER_MAIN_MASK) == HW_H30U_VER*/)
+	if(((board_id & HW_VER_MAIN_MASK) == HW_G750_VER) && (board_id != HW_G750_VER_F ))
 		{	
 			switch(type)
 			{
@@ -1745,9 +1761,72 @@ static int out_of_range(enum check_data_type type, int value)
 				break;
 			default:
 				return 0;
-	
 			}
 		}
+	else if(board_id == HW_G750_VER_F)
+		{
+			switch(type)
+			{
+				case CY_CHK_MUT_RAW:
+					if(value < -3600 || value > -1400)
+					{
+						return 1;
+					}
+					break;
+				case CY_CHK_SELF_RAW:
+					if(value < -1100 || value > 2400)
+					{
+						return 1;
+					}
+					break;
+				default:
+				return 0;
+			}
+		}
+	else if(((board_id & HW_VER_MAIN_MASK) == HW_H30T_VER)||((board_id & HW_VER_MAIN_MASK) == HW_H30U_VER))
+	{
+		switch(type)
+		{
+			case CY_CHK_MUT_RAW:
+				if(value < -3000 || value > -1200)
+				{
+					return 1;
+				}
+				break;
+			case CY_CHK_SELF_RAW:
+				if(value < -600 || value > 1300)
+				{
+					return 1;
+				}
+				break;
+			default:
+				return 0;
+		}
+	}
+	if((board_id & HW_VER_MAIN_MASK) == HW_G6T_VER)
+		{
+			switch(type)
+			{
+				case CY_CHK_MUT_RAW:
+					if(value < -200 || value > 1600)
+					{
+						return 1;
+					}
+					break;
+				case CY_CHK_SELF_RAW:
+					if(value < -1400 || value > 1400)
+					{
+						return 1;
+					}
+					break;
+				default:
+					return 0;
+			}
+		}
+	else
+	{
+		printk("%s:distinguish boardid erroor \n",__func__);
+	}
 	return 0;
 }
 
@@ -1953,8 +2032,6 @@ static int cyttsp4_get_data_and_check(struct device* dev, retrieve_func ret_func
 	dad->ic_buf[CY_CMD_RET_PNL_OUT_ELMNT_SZ_OFFS_L + cmdParam_ofs] =
 		LOW_BYTE(readElementOffset);
 
-	if (rc < 0)
-		goto cyttsp4_get_panel_data_show_err_sysfs;
 
 	
 	rc = cyttsp4_check_range(type, endian, elementSize, dad, dataIdx);
@@ -1979,11 +2056,40 @@ static int cyttsp4_check_raw_data(struct device *dev)
 	int rc = 0;
 	int i = 0;
 	enum check_data_type type;
-	//hw_product_type board_id;
-	//board_id=get_hardware_product_version();
+	hw_product_type board_id;
+	board_id=get_hardware_product_version();
 	
-	if(1/*(board_id & HW_VER_MAIN_MASK) == HW_H30U_VER*/)
+	if((board_id & HW_VER_MAIN_MASK) == HW_G750_VER)
 		{
+			/* Start scan */
+			rc = _cyttsp4_exec_scan_cmd(dev);
+				if (rc < 0){
+					return 0;
+			}
+			for(i = 0; i < 2; ++i){
+   				if(0 == i)
+				{	
+					type = CY_CHK_MUT_RAW;
+					dad->heatmap.numElement = 448;
+					dad->heatmap.dataType = CY_MUT_RAW;
+				}
+				else if(1==i)
+				{	
+					type = CY_CHK_SELF_RAW;
+					dad->heatmap.numElement = 44;
+					dad->heatmap.dataType = CY_SELF_RAW;
+				}
+				/* Start scan */
+				/* retrieve scan data */
+				rc = cyttsp4_get_data_and_check(dev,  _cyttsp4_ret_scan_data_cmd, type, CY_CMD_IN_DATA_OFFSET_VALUE);
+				if(rc < 0)
+				{	
+					return -1;
+				}
+   			}
+		}
+	else if(((board_id & HW_VER_MAIN_MASK) == HW_H30T_VER)||((board_id & HW_VER_MAIN_MASK) == HW_H30U_VER))
+	{
 			rc = _cyttsp4_exec_scan_cmd(dev);
 				if (rc < 0){
 					return 0;
@@ -2009,7 +2115,40 @@ static int cyttsp4_check_raw_data(struct device *dev)
 					return -1;
 				}
 			}
+	}
+	else if((board_id & HW_VER_MAIN_MASK) == HW_G6T_VER)
+		{
+			rc = _cyttsp4_exec_scan_cmd(dev);
+				if (rc < 0){
+					return 0;
+				}
+			for(i = 0; i < 2; ++i){
+				if(0 == i)
+				{
+					type = CY_CHK_MUT_RAW;
+					dad->heatmap.numElement = 231;
+					dad->heatmap.dataType = CY_MUT_RAW;
+				}
+				else if(1==i)
+				{
+					type = CY_CHK_SELF_RAW;
+					dad->heatmap.numElement = 32;
+					dad->heatmap.dataType = CY_SELF_RAW;
+				}
+
+				/* retrieve scan data */
+				rc = cyttsp4_get_data_and_check(dev,  _cyttsp4_ret_scan_data_cmd, type, CY_CMD_IN_DATA_OFFSET_VALUE);
+				if(rc < 0)
+				{
+					return -1;
+				}
+		
+			}
 		}
+	else
+	{
+		printk("%s:distinguish boardid error \n",__func__);
+	}
 	printk("%s:rc = %d\n", __func__, rc);
    return rc;
 }
@@ -2125,6 +2264,8 @@ int  cyttsp4_get_panel_data_check(char **buf)
 	struct device * dev = access_dev;
 	char open_test_buf[25]={0};
 	char short_test_buf[25]={0};
+	hw_product_type board_id;
+	board_id=get_hardware_product_version();
 	rc = cyttsp4_ic_grpnum_store(dev, NULL, grpnum, strlen(grpnum));
 	if (rc < 0) {
 		rc = 0;//use this to justify what to output to the user-space buf
@@ -2169,7 +2310,21 @@ int  cyttsp4_get_panel_data_check(char **buf)
 				__func__, rc);
 		goto exit;
 	}
+	if((board_id & HW_VER_MAIN_MASK) == HW_G6T_VER)
+		{
+			/*Send CAT command for open test*/
+			rc = cyttsp4_ic_grpdata_store(dev, NULL, grpdata_opentest, strlen(grpdata_opentest));
+			if (rc < 0) {
+				rc = 0;//use this to justify what to output to the user-space buf
+				dev_err(dev, "%s: Error on cyttsp4_ic_grpdata_store r=%d\n",__func__, rc);
+				goto exit;
+			}			 
 
+			rc=cyttsp4_check_open_data(dev);
+			if(rc < 0){
+				goto cyttsp4_check_open_data_err_release;
+				}
+		}
 	/*Send CAT command for short test*/
 	rc = cyttsp4_ic_grpdata_store(dev, NULL, grpdata_shorttest, strlen(grpdata_shorttest));
 	if (rc < 0) {

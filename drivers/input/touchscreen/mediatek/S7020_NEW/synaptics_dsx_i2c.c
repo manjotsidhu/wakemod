@@ -39,9 +39,8 @@
 #include "synaptics_dsx_i2c.h"
 #include "synaptics_dsx.h"
 #include "tpd_custom_synaptics.h"
-#ifdef KERNEL_ABOVE_2_6_38
 #include <linux/input/mt.h>
-#endif
+
 int synaptics_dsx_debug_mask = TP_INFO;
 module_param_named(synaptics_dsx_debug_mask, synaptics_dsx_debug_mask, int, 0664);
 
@@ -2917,7 +2916,7 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 
 #ifdef TYPE_B_PROTOCOL
 	input_mt_init_slots(rmi4_data->input_dev,
-			rmi4_data->num_of_fingers);
+			rmi4_data->num_of_fingers,0);
 #endif
 
 	f1a = NULL;
@@ -2927,7 +2926,6 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 				f1a = fhandler->data;
 		}
 	}
-
 	if (f1a) {
 		for (ii = 0; ii < f1a->valid_button_count; ii++) {
 			set_bit(f1a->button_map[ii],
@@ -3281,7 +3279,7 @@ static struct attribute_group synaptics_properties_attr_group={
  * and creates a work queue for detection of other expansion Function
  * modules.
  */
-static int __devinit synaptics_rmi4_probe(struct i2c_client *client,
+static int synaptics_rmi4_probe(struct i2c_client *client,
 		const struct i2c_device_id *dev_id)
 {
 	int retval;
@@ -3490,7 +3488,7 @@ err_set_input_dev:
  * frees the interrupt, unregisters the driver from the input subsystem,
  * turns off the power to the sensor, and frees other allocated resources.
  */
-static int __devexit synaptics_rmi4_remove(struct i2c_client *client)
+static int synaptics_rmi4_remove(struct i2c_client *client)
 {
 	unsigned char attr_count;
 	struct synaptics_rmi4_data *rmi4_data = i2c_get_clientdata(client);
@@ -4078,7 +4076,7 @@ MODULE_DEVICE_TABLE(i2c, synaptics_rmi4_id_table);
 
 static struct i2c_driver tpd_i2c_driver = {
 	.probe = synaptics_rmi4_probe,
-	.remove = __devexit_p(synaptics_rmi4_remove),
+	.remove = synaptics_rmi4_probe,
 	//.detect = tpd_detect,
 	.driver.name = "synaptics-tpd",
 	.id_table = synaptics_rmi4_id_table,

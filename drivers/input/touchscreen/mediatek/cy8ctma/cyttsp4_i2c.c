@@ -128,7 +128,6 @@ static int cyttsp4_i2c_write(struct cyttsp4_adapter *adap, u8 addr,
 {
 	struct cyttsp4_i2c *ts = dev_get_drvdata(adap->dev);
 	int rc;
-	lmdebug_dump_buf(buf, size, "cyttsp4_i2c_write");
 
 	pm_runtime_get_noresume(adap->dev);
 	mutex_lock(&ts->lock);
@@ -153,7 +152,6 @@ static int cyttsp4_i2c_read(struct cyttsp4_adapter *adap, u8 addr,
 	mutex_unlock(&ts->lock);
 	pm_runtime_put_noidle(adap->dev);
 
-	lmdebug_dump_buf(buf, size, "cyttsp4_i2c_read");
 
 	return rc;
 }

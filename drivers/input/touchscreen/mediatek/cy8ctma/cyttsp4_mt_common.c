@@ -33,6 +33,7 @@
  */
 
 #include "cyttsp4_mt_common.h"
+#include <linux/hardware_self_adapt.h>
 
 struct hoster_mode tp_hoster={0,0,0,0,0};
 extern int set_signal_disparity(unsigned long status);
@@ -562,6 +563,9 @@ static int cyttsp4_setup_input_device(struct cyttsp4_device *ttsp)
 	int i;
 	int rc;
 
+	hw_product_type board_id;
+	board_id=get_hardware_product_version();
+
 	dev_vdbg(dev, "%s: Initialize event signals\n", __func__);
 	__set_bit(EV_ABS, md->input->evbit);
 	__set_bit(EV_REL, md->input->evbit);
@@ -572,8 +576,21 @@ static int cyttsp4_setup_input_device(struct cyttsp4_device *ttsp)
 
   /* If virtualkeys enabled, don't use all screen */
   if (md->pdata->flags & CY_FLAG_VKEYS) {
-	max_x_tmp = CY_VKEYS_X;
-	max_y_tmp = CY_VKEYS_Y;
+  	if (board_id == HW_G750_VER_F)
+  		{
+			max_x_tmp = CY_VKEYS_FHD_X;
+			max_y_tmp = CY_VKEYS_FHD_Y;
+  		}
+	 if(((board_id & HW_VER_MAIN_MASK) == HW_G750_VER) ||((board_id & HW_VER_MAIN_MASK) ==HW_H30T_VER) ||((board_id & HW_VER_MAIN_MASK) == HW_H30U_VER))
+		{
+			max_x_tmp = CY_VKEYS_X;
+			max_y_tmp = CY_VKEYS_Y;
+		}
+	if((board_id & HW_VER_MAIN_MASK) == HW_G6T_VER)
+	{
+		max_x_tmp = CY_VKEYS_QHD_X;
+		max_y_tmp = CY_VKEYS_QHD_Y;
+	}
   } else {
       /* BEGIN PN:DTS2013031401505  ,Modified by F00184246, 2013/3/14*/ 
 	max_x_tmp = CY_G610_NOVKEYS_X;

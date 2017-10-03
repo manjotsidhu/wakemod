@@ -14,6 +14,7 @@
 #include "kd_imgsensor.h"
 #include "kd_imgsensor_define.h"
 #include "kd_camera_feature.h"
+#include <linux/hardware_self_adapt.h>
 
 /******************************************************************************
  * Debug configuration
@@ -53,17 +54,13 @@ u32 pinSetIdxTmp = 0;
 #define IDX_PS_ON   2
 #define IDX_PS_OFF  3
 
-
+    //keep the main/sub search information
 u32 pinSet[2][8] = {
                     //for main sensor
                     {GPIO_CAMERA_CMRST_PIN,
                         GPIO_CAMERA_CMRST_PIN_M_GPIO,   /* mode */
                         GPIO_OUT_ONE,                   /* ON state */
                         GPIO_OUT_ZERO,                  /* OFF state */
-                     GPIO_CAMERA_CMPDN_PIN,
-                        GPIO_CAMERA_CMPDN_PIN_M_GPIO,
-                        GPIO_OUT_ONE,
-                        GPIO_OUT_ZERO,
                     },
                     //for sub sensor
                     {GPIO_CAMERA_CMRST1_PIN,

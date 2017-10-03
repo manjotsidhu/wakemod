@@ -42,9 +42,7 @@
 #include "cyttsp4_bus.h"
 #include "cyttsp4_core.h"
 #include "cyttsp4_regs.h"
-/* BEGIN PN: SPBB-1253  ,Added by l00184147, 2013/2/19*/
-//#include <linux/hardware_self_adapt.h>
-/* END PN: SPBB-1253  ,Added by l00184147, 2013/2/19*/
+#include <linux/hardware_self_adapt.h>
 
 #define CYTTSP4_FW_UPGRADE 1
 #define CYTTSP4_TTCONFIG_UPGRADE 1
@@ -1233,19 +1231,30 @@ static int upgrade_firmware_from_builtin(struct cyttsp4_device *ttsp)
 	dev_vdbg(dev, "%s: Enabling firmware class loader built-in\n",
 		__func__);
 
-	/* BEGIN PN: SPBB-1253 ,Added by l00184147, 2013/2/19*/
-	//hw_product_type board_id;
-	//board_id=get_hardware_product_version();
-
-	/* BEGIN PN:DTS2013053100307 ,Added by l00184147, 2013/05/31*/
-	if(1/*(board_id & HW_VER_MAIN_MASK) == HW_H30U_VER*/)
+	hw_product_type board_id;
+	board_id=get_hardware_product_version();
+	
+	if(((board_id & HW_VER_MAIN_MASK) == HW_G750_VER)&&(board_id!=HW_G750_VER_F))
+		{
+		retval = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+			CY_FW_FILE_G750_NAME, dev, GFP_KERNEL, ttsp,
+			_cyttsp4_firmware_cont_builtin);}
+	else if (board_id==HW_G750_VER_F)
+		{
+			retval = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+				CY_FW_FILE_G750T20_NAME, dev, GFP_KERNEL, ttsp,
+				_cyttsp4_firmware_cont_builtin);	
+		}
+	else if(((board_id & HW_VER_MAIN_MASK) == HW_H30T_VER)||((board_id & HW_VER_MAIN_MASK) == HW_H30U_VER))
 		{
 		retval = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
 			CY_FW_FILE_R300_NAME, dev, GFP_KERNEL, ttsp,
 			_cyttsp4_firmware_cont_builtin);}
-
-
-	/* END PN:DTS2013053100307 ,Added by l00184147, 2013/05/31*/
+	else if((board_id & HW_VER_MAIN_MASK) == HW_G6T_VER)
+		{
+		retval = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+			CY_FW_FILE_G6_NAME, dev, GFP_KERNEL, ttsp,
+			_cyttsp4_firmware_cont_builtin);}
 	else
 		{
 		dev_err(dev, "%s: No product firmware file to be download\n",
@@ -1271,7 +1280,7 @@ static int upgrade_firmware_from_builtin(struct cyttsp4_device *ttsp)
 static int cyttsp4_upgrade_ttconfig(struct cyttsp4_device *ttsp,
 		const u8 *ttconfig_data, int ttconfig_size)
 {
-	struct device *dev = &ttsp->dev;
+		struct device *dev = &ttsp->dev;
 	int rc, rc2;
 	/* BEGIN PN:DTS2013031805163,Modified by l00184147, 2013/3/28*/
 	struct cyttsp4_loader_data *data = dev_get_drvdata(dev);
@@ -1801,6 +1810,7 @@ static void cyttsp4_fw_and_config_upgrade(
     module_name = get_touch_module_name(pannel_id);
     sprintf(touch_info,"CYPRESS_TMA463_%s.%d",module_name,(data->si->ttconfig.version&0XFF));
     dev_info(dev,"%s,%s\n",__func__,touch_info);
+    set_id_value(TP_ID, touch_info);
     return;
     /* END PN:SPBB-1273   ,Added by F00184246, 2013/3/1*/
 }

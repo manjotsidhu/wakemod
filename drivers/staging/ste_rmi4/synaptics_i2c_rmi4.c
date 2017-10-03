@@ -68,6 +68,7 @@
 #define PDT_START_SCAN_LOCATION (0x00E9)
 #define PDT_END_SCAN_LOCATION	(0x000A)
 #define PDT_ENTRY_SIZE		(0x0006)
+#define RMI4_NUMBER_OF_MAX_FINGERS		(8)
 #define SYNAPTICS_RMI4_TOUCHPAD_FUNC_NUM	(0x11)
 #define SYNAPTICS_RMI4_DEVICE_CONTROL_FUNC_NUM	(0x01)
 
@@ -742,9 +743,13 @@ static int synaptics_rmi4_i2c_query_device(struct synaptics_rmi4_data *pdata)
 			case SYNAPTICS_RMI4_TOUCHPAD_FUNC_NUM:
 				if (rmi_fd.intr_src_count) {
 					rfi = kmalloc(sizeof(*rfi),
-						      GFP_KERNEL);
-					if (!rfi)
-						return -ENOMEM;
+								GFP_KERNEL);
+					if (!rfi) {
+						dev_err(&client->dev,
+							"%s:kmalloc failed\n",
+								__func__);
+							return -ENOMEM;
+					}
 					retval = synpatics_rmi4_touchpad_detect
 								(pdata,	rfi,
 								&rmi_fd,
@@ -839,7 +844,7 @@ static int synaptics_rmi4_i2c_query_device(struct synaptics_rmi4_data *pdata)
 			if (rfi->num_of_data_sources) {
 				if (rfi->fn_number ==
 					SYNAPTICS_RMI4_TOUCHPAD_FUNC_NUM) {
-					retval = synaptics_rmi4_touchpad_config
+					retval = synpatics_rmi4_touchpad_config
 								(pdata, rfi);
 					if (retval < 0)
 						return retval;
@@ -885,7 +890,7 @@ static struct synaptics_rmi4_platform_data synaptics_rmi4_platformdata = {
  * the rmi4 Physical Device Table and enumerate any rmi4 functions that
  * have data sources associated with them.
  */
-static int synaptics_rmi4_probe
+static int __devinit synaptics_rmi4_probe
 	(struct i2c_client *client, const struct i2c_device_id *dev_id)
 {
 	int retval;
@@ -1024,7 +1029,7 @@ err_input:
  * This function uses to remove the i2c-client
  * touchscreen driver and returns integer.
  */
-static int synaptics_rmi4_remove(struct i2c_client *client)
+static int __devexit synaptics_rmi4_remove(struct i2c_client *client)
 {
 	struct synaptics_rmi4_data *rmi4_data = i2c_get_clientdata(client);
 
@@ -1133,7 +1138,7 @@ static struct i2c_driver synaptics_rmi4_driver = {
 #endif
 	},
 	.probe		=	synaptics_rmi4_probe,
-	.remove		=	synaptics_rmi4_remove,
+	.remove		=	__devexit_p(synaptics_rmi4_remove),
 	.id_table	=	synaptics_rmi4_id_table,
 };
 

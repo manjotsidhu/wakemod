@@ -717,6 +717,14 @@ static int __init customize_machine(void)
 }
 arch_initcall(customize_machine);
 
+struct tag_hw_product_info hw_product_info;
+EXPORT_SYMBOL(hw_product_info);
+static int __init parse_tag_hw_product(const struct tag *tag)
+{
+    memcpy(&hw_product_info, &tag->u.hw_id_info,sizeof(struct tag_hw_product_info));
+    return 0;
+}
+__tagtable(ATAG_HW_PRODUCT_INFO, parse_tag_hw_product);
 static int __init init_machine_late(void)
 {
 	if (machine_desc->init_late)
