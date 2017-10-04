@@ -35,9 +35,8 @@
 #include <mach/mt_typedefs.h>
 #include <linux/input.h>
 #include <mach/mt_pm_ldo.h>
-#ifdef CONFIG_HW_HAVE_TP_THREAD
+#include <linux/hardware_self_adapt.h>
 #include <mach/pmic_mt6323_sw.h>
-#endif
 #include <mach/eint.h>
 #include <cust_eint.h>
 #include <cust_gpio_usage.h>
@@ -230,13 +229,13 @@ static ssize_t h30_cyttps4_virtualkeys_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf,
-		__stringify(EV_KEY) ":"
-		__stringify(KEY_BACK) ":120:1340:200:100"
-		":" __stringify(EV_KEY) ":"
-		__stringify(KEY_HOMEPAGE) ":360:1340:200:100"
-		":" __stringify(EV_KEY) ":"
-		__stringify(KEY_MENU) ":600:1340:200:100"
-		"\n");
+	__stringify(EV_KEY) ":"
+	__stringify(KEY_BACK) ":120:1340:200:100"
+	":" __stringify(EV_KEY) ":"
+	__stringify(KEY_HOMEPAGE) ":360:1340:200:100"
+	":" __stringify(EV_KEY) ":"
+	__stringify(KEY_MENU) ":600:1340:200:100"
+	"\n");
 }
 /* END PN:DTS2013020108492  ,Modified by l00184147, 2013/1/26*/ 
 
@@ -320,22 +319,18 @@ static int cyttsp4_init(struct cyttsp4_core_platform_data *pdata,
 		int on, struct device *dev)
 {
   	printk("cyttsp4_init\n");
+	tpd_type_cap = 1;
+	tpd_load_status = 1;
 
-	/* BEGIN PN: DTS2013031908354  ,Added by l00184147, 2013/3/19*/
-	//hw_product_type board_id;
-	//board_id=get_hardware_product_version();
-	/* END PN: DTS2013031908354  ,Added by l00184147, 2013/3/19*/
+	hw_product_type board_id;
+	board_id=get_hardware_product_version();
 
 	int rc = 0;
 	struct kobject *properties_kobj;
-	kal_uint16 temp;
 	int ret;
-	
-	tpd_type_cap = 1;
-	tpd_load_status = 1;
-	/* BEGIN PN: DTS2013053100307  ,Modified by l00184147, 2013/05/31*/
-	/* BEGIN PN: DTS2013041600131  ,Modified by l00184147, 2013/4/16*/
-	/* BEGIN PN: DTS2013031908354  ,Modified by l00184147, 2013/3/19*/
+	kal_uint16 temp;
+
+
 	if (on == CYTTSP_ON) {
 		cyttsp4_init_i2c_alloc_dma_buffer();
 		
@@ -351,8 +346,6 @@ static int cyttsp4_init(struct cyttsp4_core_platform_data *pdata,
    		temp |= (0x04);
    		mt65xx_reg_sync_writew(temp, 0xF0005920);
 
-		if(1/*(board_id & HW_VER_MAIN_MASK) == HW_H30U_VER*/)
-		{
 #ifdef CONFIG_HW_HAVE_TP_THREAD		//for HUAWEI
 			//increasing VGP2 to 1.85, please help to measure it from HW
 			hwPowerOn(MT6323_POWER_LDO_VGP1, VOL_2800, "TP");
@@ -362,10 +355,41 @@ static int cyttsp4_init(struct cyttsp4_core_platform_data *pdata,
 #else
 			//TODO
 #endif
+		if(((board_id & HW_VER_MAIN_MASK) == HW_G750_VER)&&(board_id !=HW_G750_VER_F))
+			{
+				properties_kobj = kobject_create_and_add("board_properties", NULL);
+				if (properties_kobj)
+				ret = sysfs_create_group(properties_kobj,
+						&g750_cyttsp4_properties_attr_group);
+				if (!properties_kobj || ret)
+					pr_err("%s: failed to create board_properties\n", __func__);
+			}
+		else if(board_id ==HW_G750_VER_F)
+			{
+				properties_kobj = kobject_create_and_add("board_properties", NULL);
+	  			if (properties_kobj)
+				ret = sysfs_create_group(properties_kobj,
+						&cyttsp4_properties_attr_group_fhd);
+
+				if (!properties_kobj || ret)
+					pr_err("%s: failed to create board_properties\n", __func__);
+			}
+		else if(((board_id & HW_VER_MAIN_MASK) == HW_H30T_VER )||((board_id & HW_VER_MAIN_MASK) == HW_H30U_VER))
+		{
 			properties_kobj = kobject_create_and_add("board_properties", NULL);
 			if (properties_kobj)
 			ret = sysfs_create_group(properties_kobj,
 					&h30_cyttsp4_properties_attr_group);
+			if (!properties_kobj || ret)
+			pr_err("%s: failed to create board_properties\n", __func__);
+		}
+		else if((board_id & HW_VER_MAIN_MASK) == HW_G6T_VER)
+		{
+		  printk("this product is g6t00\n");
+			properties_kobj = kobject_create_and_add("board_properties", NULL);
+	  		if (properties_kobj)
+			ret = sysfs_create_group(properties_kobj,
+					&cyttsp4_properties_attr_group_qhd);
 			if (!properties_kobj || ret)
 			pr_err("%s: failed to create board_properties\n", __func__);
 		}
@@ -467,6 +491,7 @@ static struct cyttsp4_touch_firmware cyttsp4_firmware = {
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_TTCONFIG_UPGRADE
+
 /* BEGIN PN:SPBB-1254 ,Modified by F00184246, 2013/2/18*/
 #include "cyttsp4_params.h"
 /* END PN:SPBB-1254 ,Modified by F00184246, 2013/2/18*/

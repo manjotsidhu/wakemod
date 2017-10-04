@@ -175,7 +175,29 @@ struct tag_mdinfo_data{
 	u8 md_type[4];
 };
 
+/* boardid information */
+#define ATAG_HW_PRODUCT_INFO    0x54410010
+struct tag_hw_product_info{
+    volatile u32 board_id;
+    volatile u32 battery_id;
+#ifdef CONFIG_DL_CHECK_SUPPORT
+    volatile u32 dl_check_tag;
+#endif
+
+    volatile u32 ddr_md5_value;
+};
 #define ATAG_TEE_DATA 0x41000808
+
+struct tag_tee_data{
+   u32 tee_size;
+};
+
+
+
+#define ATAG_DDR_DFSINFO_DATA 0x41000700
+struct tag_ddr_dfs_info_data{
+   u32 dfs_enable;
+};
 
 /* general memory descriptor */
 typedef struct {
@@ -226,6 +248,8 @@ struct tag {
 		struct tag_boot		boot;
 		struct tag_meta_com	meta_com;
 		struct tag_devinfo_data	devinfo_data;
+                struct tag_hw_product_info hw_id_info;
+                struct tag_ddr_dfs_info_data dfs_data;
                 tag_dfo_boot     dfo_data;
                 struct tag_mdinfo_data mdinfo_data;
 		mem_desc_t tee_reserved_mem;

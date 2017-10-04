@@ -1529,3 +1529,4 @@ module_exit(mt_i2c_exit);
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("MediaTek I2C Bus Driver");
 MODULE_AUTHOR("Infinity Chen <infinity.chen@mediatek.com>");
+
