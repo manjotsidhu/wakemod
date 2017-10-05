@@ -39,7 +39,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/firmware.h>
-#include "cyttsp4_bus.h"
+#include <linux/cyttsp4_bus.h>
 #include "cyttsp4_core.h"
 #include "cyttsp4_regs.h"
 #include <linux/hardware_self_adapt.h>

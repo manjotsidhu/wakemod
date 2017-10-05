@@ -423,6 +423,17 @@ config TOUCHSCREEN_MTK
 
 # Touch panel
 
+config HUAWEI_EASY_WAKEUP
+	bool
+	default y
+
+config HW_HAVE_TP_THREAD
+	bool
+	default y
+
+config TOUCHSCREEN_CYPRESS_CYTTSP4_INCLUDE_FW
+	bool
+	default y
 
 config MTK_CY8CTMA 
         bool "CY8CTMA for Mediatek package" 
@@ -468,8 +479,6 @@ config TOUCHSCREEN_MTK_GT9XX
 config TOUCHSCREEN_MTK_GT9XX_HOTKNOT_SCP
 	bool "GT9XX with SCP for Mediatek package"
 	depends on TOUCHSCREEN_MTK
-
-
         default n
 
 config TOUCHSCREEN_HP600

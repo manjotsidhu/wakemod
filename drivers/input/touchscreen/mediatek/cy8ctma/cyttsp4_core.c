@@ -60,7 +60,7 @@ extern struct hoster_mode tp_hoster;
 #endif
 /* END PN:SPBB-1257 ,Added by l00184147, 2013/2/21*/
 
-#include "cyttsp4_bus.h"
+#include <linux/cyttsp4_bus.h>
 #include "cyttsp4_core.h"
 #include "cyttsp4_regs.h"
 /* BEGIN PN:DTS2013040204005 ,Added by l00184147, 2013/4/2*/ 

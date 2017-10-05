@@ -36,7 +36,7 @@
  *
  */
 
-#include "cyttsp4_bus.h"
+#include <linux/cyttsp4_bus.h>
 #include "cyttsp4_core.h"
 #include "cyttsp4_i2c.h"
 

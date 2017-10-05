@@ -3607,7 +3607,7 @@ static void synaptics_put_device_into_easy_wakeup(struct synaptics_rmi4_data *rm
 	//if the sleep_gesture_flag is ture,it presents that  the tp is at sleep state	
 
 	if (true == rmi4_data->sleep_gesture_flag)	{
-		tp_log_info("synaptics_put_device_into_easy_wakeup  rmi4_data->sleep_gesture_flag =%x \n");
+		//tp_log_info("synaptics_put_device_into_easy_wakeup  rmi4_data->sleep_gesture_flag =%x \n");
 		return;
 	}
 
