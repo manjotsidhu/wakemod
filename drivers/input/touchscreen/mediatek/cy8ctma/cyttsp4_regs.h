@@ -1,7 +1,4 @@
-/* BEGIN PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/
 //add Touch driver for G610-T11
-/* BEGIN PN:DTS2013012601133 ,Modified by l00184147, 2013/1/26*/ 
-/* BEGIN PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
 /*
  * cyttsp4_regs.h
  * Cypress TrueTouch(TM) Standard Product V4 registers.
@@ -349,7 +346,6 @@ enum cyttsp4_ic_grpnum {
 #define CY_VKEYS_QHD_Y 960
 #define CY_G610_NOVKEYS_X 540
 #define CY_G610_NOVKEYS_Y 960
-/* END PN:DTS2013031401505  ,Added by F00184246, 2013/3/14*/
 enum cyttsp4_flags {
 	CY_FLAG_NONE = 0x00,
 	CY_FLAG_HOVER = 0x04,
@@ -639,6 +635,3 @@ struct cyttsp4_sysinfo {
 };
 
 #endif /* _CYTTSP4_REGS_H */
-/* END PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
-/* END PN:DTS2013012601133 ,Modified by l00184147, 2013/1/26*/ 
-/* END PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/

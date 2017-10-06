@@ -1,8 +1,4 @@
-/* BEGIN PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/
 //add Touch driver for G610-T11
-/* BEGIN PN:DTS2013012601133 ,Modified by l00184147, 2013/1/26*/ 
-/* BEGIN PN:DTS2013011401860  ,Modified by l00184147, 2013/1/14*/
-/* BEGIN PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
 /*
  * cyttsp4_core.h
  * Cypress TrueTouch(TM) Standard Product V4 Core driver module.
@@ -87,13 +83,10 @@ struct cyttsp4_touch_firmware {
 	uint8_t vsize;
 } __packed;
 
-/* BEGIN PN:SPBB-1254  ,Added by F00184246, 2013/2/18*/
 struct  cyttsp4_sett_param_map {
 	u8 id;
 	struct touch_settings *param;
 };
-/* END PN:SPBB-1254  ,Added by F00184246, 2013/2/18*/
-/* BEGIN PN:SPBB-1254  ,Modified by F00184246, 2013/2/18*/
 struct cyttsp4_loader_platform_data {
 	struct cyttsp4_touch_firmware *fw;
 	struct touch_settings *param_regs;
@@ -101,7 +94,6 @@ struct cyttsp4_loader_platform_data {
 	struct cyttsp4_sett_param_map *param_map; 
 	u32 flags;
 } __packed;
-/* END PN:SPBB-1254  ,Modified by F00184246, 2013/2/18*/
 
 struct cyttsp4_core_platform_data {
 	int irq_gpio;
@@ -137,7 +129,3 @@ extern void cyttsp4_pr_buf(struct device *dev, u8 *pr_buf, u8 *dptr, int size,
 #define CYTTSP_ON 1
 #define CYTTSP_NO_OFF 2
 #endif /* _LINUX_CYTTSP4_CORE_H */
-/* END PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
-/* END PN:DTS2013011401860  ,Modified by l00184147, 2013/1/14*/
-/* END PN:DTS2013012601133 ,Modified by l00184147, 2013/1/26*/ 
-/* END PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/

@@ -1,8 +1,4 @@
-/* BEGIN PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/
 //add Touch driver for G610-T11
-/* BEGIN PN:DTS2013012601133 ,Modified by l00184147, 2013/1/26*/ 
-/* BEGIN PN:DTS2013011401860  ,Modified by l00184147, 2013/1/14*/
-/* BEGIN PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
 #if 1 /* def CONFIG_CYPRESS_TTSP */
 #include <linux/init.h>
 #include <linux/module.h>
@@ -35,25 +31,22 @@
 #include <mach/mt_typedefs.h>
 #include <linux/input.h>
 #include <mach/mt_pm_ldo.h>
+#ifdef CONFIG_HW_HAVE_TP_THREAD
 #include <linux/hardware_self_adapt.h>
 #include <mach/pmic_mt6323_sw.h>
+#endif
 #include <mach/eint.h>
 #include <cust_eint.h>
 #include <cust_gpio_usage.h>
-#include <mach/sync_write.h>
 
-/* BEGIN PN: DTS2013031908354  ,Added by l00184147, 2013/3/19*/
-//#include <linux/hardware_self_adapt.h>
-/* END PN: DTS2013031908354  ,Added by l00184147, 2013/3/19*/
+ #include <mach/sync_write.h>
 
 #define CYTTSP4_I2C_TCH_ADR 0x1a
 #define CYTTSP4_I2C_IRQ_GPIO 70	/* sample value from Blue */
 #define CYTTSP4_I2C_RST_GPIO 10	/* sample value from Blue */
 
 //#define CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_FW_UPGRADE
-/* BEGIN PN:SPBB-1254 ,Added by F00184246, 2013/2/18*/
 #define CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_TTCONFIG_UPGRADE 1
-/* END PN:SPBB-1254 ,Added by F00184246, 2013/2/18*/
 
 
 extern int tpd_type_cap;
@@ -155,8 +148,6 @@ int cyttsp4_MTK_i2c_read(struct i2c_client *client, uint8_t *buf, int len)
 
 
 extern void eint_interrupt_handler(void) ;
-/* BEGIN PN:DTS2013033006231 ,Deleted by l00184147, 2013/3/27*/ 
-/* END PN:DTS2013033006231 ,Deleted by l00184147, 2013/3/27*/ 
 
 
 void cyttsp4_mtk_gpio_interrupt_register()
@@ -237,8 +228,6 @@ static ssize_t h30_cyttps4_virtualkeys_show(struct kobject *kobj,
 	__stringify(KEY_MENU) ":600:1340:200:100"
 	"\n");
 }
-/* END PN:DTS2013020108492  ,Modified by l00184147, 2013/1/26*/ 
-
 static struct kobj_attribute h30_cyttsp4_virtualkeys_attr = {
 	.attr = {		
         	.name = "virtualkeys.mtk-tpd",
@@ -329,27 +318,25 @@ static int cyttsp4_init(struct cyttsp4_core_platform_data *pdata,
 	struct kobject *properties_kobj;
 	int ret;
 	kal_uint16 temp;
-
-
+	
 	if (on == CYTTSP_ON) {
 		cyttsp4_init_i2c_alloc_dma_buffer();
 		
-		/* BEGIN PN: DTS2013060600352 ,Deleted by l00184147, 2013/06/06*/
 		//pull up reset pin after poweron the touch controller
-		/* END PN: DTS2013060600352 ,Deleted by l00184147, 2013/06/06*/
 
 		mt_set_gpio_mode(GPIO_CTP_EINT_PIN, GPIO_CTP_EINT_PIN_M_EINT);
 		mt_set_gpio_dir(GPIO_CTP_EINT_PIN, GPIO_DIR_IN);
 		mt_set_gpio_pull_enable(GPIO_CTP_EINT_PIN, GPIO_PULL_ENABLE);
 		mt_set_gpio_pull_select(GPIO_CTP_EINT_PIN, GPIO_PULL_UP);
-   		temp = DRV_Reg(0xF0005920);
-   		temp |= (0x04);
-   		mt65xx_reg_sync_writew(temp, 0xF0005920);
+
+		temp=DRV_Reg(0xF0005920);
+		temp |=(0x04);
+		mt65xx_reg_sync_writew(temp,0xF0005920);
 
 #ifdef CONFIG_HW_HAVE_TP_THREAD		//for HUAWEI
-			//increasing VGP2 to 1.85, please help to measure it from HW
-			hwPowerOn(MT6323_POWER_LDO_VGP1, VOL_2800, "TP");
-			hwPowerOn(MT6323_POWER_LDO_VGP3, VOL_1800, "TP");
+		//increasing VGP2 to 1.85, please help to measure it from HW
+		hwPowerOn(MT6323_POWER_LDO_VGP1, VOL_2800, "TP");
+		hwPowerOn(MT6323_POWER_LDO_VGP3, VOL_1800, "TP");
     		pmic_config_interface(0x0534, 0xd, 0xf, 8);	//+60mV
     		//pmic_config_interface(0x0534, 0xb, 0xf, 8);	//+100mV
 #else
@@ -395,12 +382,11 @@ static int cyttsp4_init(struct cyttsp4_core_platform_data *pdata,
 		}
 		else
 			pr_err("power on cyttsp4 error\n");
-		/* BEGIN PN: DTS2013060600352 ,Added by l00184147, 2013/06/06*/
+		
 		//pull up reset pin after poweron the touch controller
 		mt_set_gpio_mode(GPIO_CTP_RST_PIN, GPIO_CTP_RST_PIN_M_GPIO);
 		mt_set_gpio_dir(GPIO_CTP_RST_PIN, GPIO_DIR_OUT);
 		mt_set_gpio_out(GPIO_CTP_RST_PIN, GPIO_OUT_ONE);
-		/* END PN: DTS2013060600352 ,Added by l00184147, 2013/06/06*/
 	}
 	else if(on == CYTTSP_OFF){
 			if(1/*(board_id & HW_VER_MAIN_MASK) == HW_G750_VER*/)
@@ -452,7 +438,6 @@ static int cyttsp4_power(struct cyttsp4_core_platform_data *pdata,
 
 	return cyttsp4_sleep(dev);
 }
-/* BEGIN PN: DTS2013021602307 ,Modified by l00184147, 2013/2/16*/
 /* Button to keycode conversion */
 static u16 cyttsp4_btn_keys[] = {
 	/* use this table to map buttons to keycodes (see input.h) */
@@ -465,7 +450,6 @@ static u16 cyttsp4_btn_keys[] = {
 	KEY_CAMERA,		/* 212 */
 	KEY_POWER		/* 116 */
 };
-/* END PN: DTS2013021602307 ,Modified by l00184147, 2013/2/16*/
 
 static struct touch_settings cyttsp4_sett_btn_keys = {
 	.data = (uint8_t *)&cyttsp4_btn_keys[0],
@@ -491,10 +475,7 @@ static struct cyttsp4_touch_firmware cyttsp4_firmware = {
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_TTCONFIG_UPGRADE
-
-/* BEGIN PN:SPBB-1254 ,Modified by F00184246, 2013/2/18*/
 #include "cyttsp4_params.h"
-/* END PN:SPBB-1254 ,Modified by F00184246, 2013/2/18*/
 static struct touch_settings cyttsp4_sett_param_regs = {
 	.data = (uint8_t *)&cyttsp4_param_regs[0],
 	.size = ARRAY_SIZE(cyttsp4_param_regs),
@@ -799,7 +780,6 @@ static struct cyttsp4_core_platform_data _cyttsp4_G6_core_platform_data = {
 
 #define CY_IGNORE_VALUE 0xFFFF
 
-/* BEGIN PN: DTS2013031908354  ,Modified by l00184147, 2013/3/19*/
 static const uint16_t cyttsp4_abs[] = {
 	ABS_MT_POSITION_X, CY_ABS_MIN_X, CY_ABS_MAX_X, 0, 0,
 	ABS_MT_POSITION_Y, CY_ABS_MIN_Y, CY_ABS_MAX_Y, 0, 0,
@@ -810,7 +790,6 @@ static const uint16_t cyttsp4_abs[] = {
 	ABS_MT_TOUCH_MINOR, 0, 255, 0, 0,
 	ABS_MT_ORIENTATION, -128, 127, 0, 0,
 };
-/* END PN: DTS2013031908354  ,Modified by l00184147, 2013/3/19*/
 
 struct touch_framework cyttsp4_framework = {
 	.abs = (uint16_t *)&cyttsp4_abs[0],
@@ -820,9 +799,7 @@ struct touch_framework cyttsp4_framework = {
 #endif /* CONFIG_CYPRESS_TTSP */
 
 
-/* BEGIN PN:DTS2013022102040,Modified by l00211038, 2013/02/21*/
 static struct i2c_board_info mtk_ttsp_i2c_tpd=
-/* END   PN: DTS2013022102040,Modified by l00211038, 2013/02/21*/
 { // KEVKEV
 		I2C_BOARD_INFO(CYTTSP4_I2C_NAME, CYTTSP4_I2C_TCH_ADR),
 		.irq =  -1,
@@ -861,9 +838,7 @@ static struct cyttsp4_mt_platform_data _cyttsp4_mt_virtualkey_platform_data = {
 	.inp_dev_name = CYTTSP4_MT_NAME,
 };
 
-/* BEGIN PN:DTS2013022102040,Modified by l00211038, 2013/02/21*/
 struct cyttsp4_device_info cyttsp4_mt_virtualkey_info  = {
-/* END   PN: DTS2013022102040,Modified by l00211038, 2013/02/21*/
 	.name = CYTTSP4_MT_NAME,
 	.core_id = "main_ttsp_core",
 	.platform_data = &_cyttsp4_mt_virtualkey_platform_data,
@@ -875,37 +850,25 @@ static struct cyttsp4_mt_platform_data _cyttsp4_mt_novirtualkey_platform_data = 
 	.inp_dev_name = CYTTSP4_MT_NAME,
 };
 
-/* BEGIN PN:DTS2013022102040,Modified by l00211038, 2013/02/21*/
 struct cyttsp4_device_info cyttsp4_mt_novirtualkey_info  = {
-/* END   PN: DTS2013022102040,Modified by l00211038, 2013/02/21*/
 	.name = CYTTSP4_MT_NAME,
 	.core_id = "main_ttsp_core",
 	.platform_data = &_cyttsp4_mt_novirtualkey_platform_data,
 };
-/* END PN: DTS2013021602307 ,Modified by l00184147, 2013/2/16*/
 
 static struct cyttsp4_btn_platform_data _cyttsp4_btn_platform_data = {
 	.inp_dev_name = CYTTSP4_BTN_NAME,
 };
 
-/* BEGIN PN:DTS2013022102040,Modified by l00211038, 2013/02/21*/
 struct cyttsp4_device_info cyttsp4_btn_info = {
-/* END   PN: DTS2013022102040,Modified by l00211038, 2013/02/21*/
 	.name = CYTTSP4_BTN_NAME,
 	.core_id = "main_ttsp_core",
 	.platform_data = &_cyttsp4_btn_platform_data,
 };
 
-/* BEGIN PN:DTS2013033006231 ,Modified by l00184147, 2013/3/27*/
 static int __init tpd_ttsp_init(void) {
   printk("MediaTek TTDA ttsp touch panel driver init\n");
   i2c_register_board_info(0, &mtk_ttsp_i2c_tpd, 1);
   return 0;
 }
-/* END PN:DTS2013033006231 ,Modified by l00184147, 2013/1/27*/
 module_init(tpd_ttsp_init);
-/* END PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
-/* END PN:DTS2013011401860  ,Modified by l00184147, 2013/1/14*/
-/* END PN:DTS2013012601133 ,Modified by l00184147, 2013/1/26*/ 
-/* END PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/
-
