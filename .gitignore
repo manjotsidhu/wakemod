@@ -10,6 +10,7 @@
 # Normal rules
 #
 m.sh
+OUT_kernel/
 .*
 *.o
 *.o.*
