@@ -33,7 +33,7 @@
  *
  */
 
-#include <linux/cyttsp4_bus.h>
+#include "cyttsp4_bus.h"
 
 #include <linux/delay.h>
 #ifdef CONFIG_HAS_EARLYSUSPEND

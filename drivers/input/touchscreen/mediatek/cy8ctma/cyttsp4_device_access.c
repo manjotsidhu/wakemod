@@ -32,7 +32,7 @@
  *
  */
 
-#include <linux/cyttsp4_bus.h>
+#include "cyttsp4_bus.h"
 #include "cyttsp4_core.h"
 #include "cyttsp4_mt.h"
 

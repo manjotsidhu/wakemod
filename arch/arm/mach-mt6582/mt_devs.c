@@ -1554,7 +1554,7 @@ Function:       // HW_TP_Init
   Return:         //0 or 1
   Others:
 ******************************************************************************/
-#include <linux/cyttsp4_bus.h>
+#include "cyttsp4_bus.h"
 extern struct cyttsp4_device_info cyttsp4_mt_virtualkey_info;
 extern struct cyttsp4_core_info cyttsp4_R300_core_info;
 extern struct cyttsp4_core_info cyttsp4_G6_core_info;
