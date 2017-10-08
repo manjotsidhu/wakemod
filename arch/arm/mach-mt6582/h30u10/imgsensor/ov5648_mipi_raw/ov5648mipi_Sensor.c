@@ -111,6 +111,52 @@ extern int iReadRegI2C(u8 *a_pSendData , u16 a_sizeSendData, u8 * a_pRecvData, u
 extern int iWriteRegI2C(u8 *a_pSendData , u16 a_sizeSendData, u16 i2cId);
 void OV5648MIPISetMaxFrameRate(UINT16 u2FrameRate);
 
+#define OV5648MIPI_USE_OTP
+
+#ifdef OV5648MIPI_USE_OTP
+struct OV5648MIPI_Otp_Struct {
+    kal_uint32 iProduct_Year;//product year
+    kal_uint32 iProduct_Month;//product month
+    kal_uint32 iProduct_Date;//product data
+    kal_uint32 iCamera_Id;//hw camea id
+    kal_uint32 iSupplier_Version_Id;//supplier id
+    kal_uint32 iWB_RG_H;//rg high bits
+    kal_uint32 iWB_RG_L;// rg low bits
+    kal_uint32 iWB_BG_H;//bg hight bits
+    kal_uint32 iWB_BG_L;//bg low bits
+    kal_uint32 iWB_GbGr_H;//gr/gb high bits
+    kal_uint32 iWB_GbGr_L;//gb/gr low bits
+};
+
+//R/G and B/G value of Golden Samples.
+static const kal_uint32 RG_Ratio_Typical = 0x283;//the average of 4 Golden samples' RG ratio
+static const kal_uint32 BG_Ratio_Typical = 0x2f9;//the average of 4 Golden samples' BG ratio
+
+//Final r/g/g gain
+static kal_uint32 gR_gain = 0;
+static kal_uint32 gG_gain = 0;
+static kal_uint32 gB_gain = 0;
+
+//OTP read indications
+static  kal_uint32 OV5648MIPI_otp_read_flag = 0 ;
+
+//OV5648 opt has 2 bank
+#define OV5648MIPI_OTP_BANK0    0
+#define OV5648MIPI_OTP_BANK1    1
+#define OV5648MIPI_OTP_BANK_ERROR    -1
+
+
+#define OTP_GROUP_CHECK_FLAG  3
+#define OTP_GROUP_CHECK_SHIFT 6
+#define OTP_GROUP_EMPTY     0
+#define OTP_GROUP_VALID      1
+#define OTP_GROUP_UNKOWN   2
+#define OTP_GROUP_INVALID  3
+
+#define OTP_VALID  0xFF
+
+#endif
+
 
 kal_uint16 OV5648MIPI_read_cmos_sensor(kal_uint32 addr)
 {
@@ -127,269 +173,6 @@ void OV5648MIPI_write_cmos_sensor(kal_uint32 addr, kal_uint32 para)
     char puSendCmd[3] = {(char)(addr >> 8), (char)(addr & 0xFF), (char)(para & 0xFF)};
     iWriteRegI2C(puSendCmd, 3, OV5648MIPI_WRITE_ID);
 }
-
-
-
-//OTP Code Start
-#ifdef OV5648MIPI_USE_OTP
-//index: index of otp group.(1, 2)
-//return:	 ERROR: group index have invalid data
-//		 TRUE: group index has valid data
-kal_uint16 OV5648MIPI_check_otp_wb(kal_uint16 index)
-{
-    kal_uint16 i;
-	kal_uint16 rg = 0, bg = 0;
-
-	//clear otp buffer
-	for(i = 0; i < 16; i++)
-	{
-        OV5648MIPI_write_cmos_sensor(0x3d00 + i, 0x00);
-	}    
-
-    if(index == 2)  //Group 2
-    {
-    	//read otp bank 1
-        OV5648MIPI_write_cmos_sensor(0x3d84,0xc0);	
-		OV5648MIPI_write_cmos_sensor(0x3d85,0x10); //OTP start address, bank 0
-		OV5648MIPI_write_cmos_sensor(0x3d86,0x1f); //OTP end address
-	    OV5648MIPI_write_cmos_sensor(0x3d81,0x01); //OTP Read Enable
-        
-		msleep(50); // delay 50ms
-        
-		rg = (OV5648MIPI_read_cmos_sensor(0x3d07) << 8) + OV5648MIPI_read_cmos_sensor(0x3d08);	
-		bg = (OV5648MIPI_read_cmos_sensor(0x3d09) << 8) + OV5648MIPI_read_cmos_sensor(0x3d0a);
-    }
-    else if(index == 1) //Group 1
-    {
-    	//read otp bank 0
-        OV5648MIPI_write_cmos_sensor(0x3d84,0xc0);	
-		OV5648MIPI_write_cmos_sensor(0x3d85,0x00); //OTP start address, bank 0
-		OV5648MIPI_write_cmos_sensor(0x3d86,0x0f); //OTP end address
-	    OV5648MIPI_write_cmos_sensor(0x3d81,0x01); //OTP Read Enable
-        
-		msleep(50); // delay 50ms
-        
-		rg = (OV5648MIPI_read_cmos_sensor(0x3d0a) << 8) + OV5648MIPI_read_cmos_sensor(0x3d0b);	
-		bg = (OV5648MIPI_read_cmos_sensor(0x3d0c) << 8) + OV5648MIPI_read_cmos_sensor(0x3d0d); 	   	
-    }
-	else
-	{
-        SENSORDB("invalid index!");
-        return FALSE;
-	}
-    
-	//disable otp read
-	OV5648MIPI_write_cmos_sensor(0x3d81,0x00);
-    
-	//clear otp buffer
-	for(i=0; i<16; i++)
-	{
-        OV5648MIPI_write_cmos_sensor(0x3d00 + i, 0x00);
-	}
-	
-	if((rg == 0)||(bg == 0))
-	{
-		return FALSE;
-	}
-	else
-	{
-	    return TRUE;
-	}
-}
-		
-//index:index of otp group.(1,2,3)
-//return:	0.
-kal_uint16 OV5648MIPI_read_otp_wb(kal_uint16 index, struct OV5648MIPI_otp_struct *otp_ptr)
-{
-	kal_uint16 i;
-
-	//clear otp buffer
-	for(i = 0; i < 16; i++)
-	{
-        OV5648MIPI_write_cmos_sensor(0x3d00 + i, 0x00);
-	}    
-
-    if(index == 2)  //Group 2
-    {
-    	//read otp bank 1
-        OV5648MIPI_write_cmos_sensor(0x3d84,0xc0);	
-		OV5648MIPI_write_cmos_sensor(0x3d85,0x10); //OTP start address, bank 0
-		OV5648MIPI_write_cmos_sensor(0x3d86,0x1f); //OTP end address
-	    OV5648MIPI_write_cmos_sensor(0x3d81,0x01); //OTP Read Enable
-        
-		msleep(50); // delay 50ms
-
-        (*otp_ptr).rg_ratio = (OV5648MIPI_read_cmos_sensor(0x3d07) << 8) + OV5648MIPI_read_cmos_sensor(0x3d08);	
-		(*otp_ptr).bg_ratio = (OV5648MIPI_read_cmos_sensor(0x3d09) << 8) + OV5648MIPI_read_cmos_sensor(0x3d0a);
-        (*otp_ptr).gb_gr_ratio = (OV5648MIPI_read_cmos_sensor(0x3d0b) << 8) + OV5648MIPI_read_cmos_sensor(0x3d0c);
-    }
-    else if(index == 1) //Group 1
-    {
-    	//read otp bank 0
-        OV5648MIPI_write_cmos_sensor(0x3d84,0xc0);	
-		OV5648MIPI_write_cmos_sensor(0x3d85,0x00); //OTP start address, bank 0
-		OV5648MIPI_write_cmos_sensor(0x3d86,0x0f); //OTP end address
-	    OV5648MIPI_write_cmos_sensor(0x3d81,0x01); //OTP Read Enable
-        
-		msleep(50); // delay 50ms
-
-        (*otp_ptr).rg_ratio = (OV5648MIPI_read_cmos_sensor(0x3d0a) << 8) + OV5648MIPI_read_cmos_sensor(0x3d0b);	
-		(*otp_ptr).bg_ratio = (OV5648MIPI_read_cmos_sensor(0x3d0c) << 8) + OV5648MIPI_read_cmos_sensor(0x3d0d);
-        (*otp_ptr).gb_gr_ratio = (OV5648MIPI_read_cmos_sensor(0x3d0e) << 8) + OV5648MIPI_read_cmos_sensor(0x3d0f); 	
-    }
-	else
-	{
-        SENSORDB("invalid index!");
-        return FALSE;
-	}
-
-	//disable otp read
-	OV5648MIPI_write_cmos_sensor(0x3d81, 0x00);    
-
-    //clear otp buffer
-	for(i = 0; i < 16; i++)
-	{
-        OV5648MIPI_write_cmos_sensor(0x3d00 + i, 0x00);
-	}
-
-    SENSORDB("Read wb otp data success!");
-    SENSORDB("rg_ratio = %d, bg_ratio = %d, gb_gr_ratio = %d", (*otp_ptr).rg_ratio, (*otp_ptr).bg_ratio, (*otp_ptr).gb_gr_ratio);
-
-    return TRUE;
-}
-         			
-//R_gain: red gain of sensor AWB, 0x400 = 1
-//G_gain: green gain of sensor AWB, 0x400 = 1
-//B_gain: blue gain of sensor AWB, 0x400 = 1
-//reutrn 0
-kal_uint16 OV5648MIPI_update_wb_gain(kal_uint32 R_gain, kal_uint32 G_gain, kal_uint32 B_gain)
-{
-    SENSORDB("R_gain[%x] G_gain[%x] B_gain[%x]", R_gain, G_gain, B_gain);
-
-	if(R_gain > 0x400)
-	{
-		OV5648MIPI_write_cmos_sensor(0x5186, R_gain >> 8);
-		OV5648MIPI_write_cmos_sensor(0x5187, (R_gain & 0x00FF));
-	}
-    
-	if(G_gain > 0x400)
-	{
-		OV5648MIPI_write_cmos_sensor(0x5188, G_gain >> 8);
-		OV5648MIPI_write_cmos_sensor(0x5189, (G_gain & 0x00FF));
-	}
-    
-	if(B_gain > 0x400)
-	{
-		OV5648MIPI_write_cmos_sensor(0x518a, B_gain >> 8);
-		OV5648MIPI_write_cmos_sensor(0x518b, (B_gain & 0x00FF));
-	}
-    
-	return 0;
-}
-
-//R/G and B/G ratio of typical camera module is defined here
-kal_uint32 RG_Ratio_Typical = RG_Typical;
-kal_uint32 BG_Ratio_Typical = BG_Typical;
-kal_uint32 GB_GR_Ratio_Typical = GB_GR_Typical;
-
-
-//call this function after OV5648 initialization
-//return value:	0: Update success
-//			      1: No OTP
-kal_uint16 update_otp(void)
-{	
-	struct OV5648MIPI_otp_struct current_otp;
-	kal_uint32 i, otp_index,temp;
-	kal_uint32 R_gain, B_gain, G_gain, G_gain_R,G_gain_B;
-	kal_uint32 rg, bg;
-
-    // R/G and B/G of current camera module is read out from sensor OTP
-	// check first wb OTP with valid OTP
-	// Have two groups otp data, Group 1 & Group 2, read group 2 OTP data first
-	for(i = 2; i >= 1; i--)
-	{
-    	if(OV5648MIPI_check_otp_wb(i))
-		{
-			otp_index = i;
-			break;
-		}
-	}
-	if(i == 0)
-	{  
-		//no valid wb OTP data
-	 	SENSORDB("no valid wb OTP data!");
-		return 1;
-	}
-	
-	OV5648MIPI_read_otp_wb(otp_index, &current_otp);
-    
-	rg=current_otp.rg_ratio;
-	bg=current_otp.bg_ratio;
-
-	//calculate G gain
-	//0x400 =1xgain
-	if(bg < BG_Ratio_Typical)
-	{
-		if(rg < RG_Ratio_Typical)
-		{
-			//current_opt.bg_ratio < BG_Ratio_Typical &&
-			//cuttent_otp.rg < RG_Ratio_Typical
-			G_gain = 0x400;
-			B_gain = 0x400 * BG_Ratio_Typical /bg;
-			R_gain = 0x400 * RG_Ratio_Typical /rg;
-		}
-		else
-		{
-			//current_otp.bg_ratio < BG_Ratio_Typical &&
-	       	//current_otp.rg_ratio >= RG_Ratio_Typical
-	       	R_gain = 0x400;
-			G_gain = 0x400 * rg / RG_Ratio_Typical;
-			B_gain = G_gain * BG_Ratio_Typical /bg;		        
-		}
-	}
-	else
-	{
-		if(rg < RG_Ratio_Typical)
-		{
-			//current_otp.bg_ratio >= BG_Ratio_Typical &&
-	       	//current_otp.rg_ratio < RG_Ratio_Typical
-	       	B_gain = 0x400;
-			G_gain = 0x400 * bg/ BG_Ratio_Typical;
-			R_gain = G_gain * RG_Ratio_Typical / rg;					
-		}
-		else
-		{
-			//current_otp.bg_ratio >= BG_Ratio_Typical &&
-        	//current_otp.rg_ratio >= RG_Ratio_Typical
-        	G_gain_B = 0x400 * bg / BG_Ratio_Typical;
-	    	G_gain_R = 0x400 * rg / RG_Ratio_Typical;
-			
-			if(G_gain_B > G_gain_R)
-			{
-				B_gain = 0x400;
-				G_gain = G_gain_B;
-				R_gain = G_gain * RG_Ratio_Typical / rg;
-			}
-			else
-			{
-				R_gain = 0x400;
-				G_gain = G_gain_R;
-				B_gain = G_gain * BG_Ratio_Typical / bg;
-			}			        
-		}			
-	}
-    
-	//write sensor wb gain to register
-	OV5648MIPI_update_wb_gain(R_gain, G_gain, B_gain);
-	//success
-	return 0;
-}
-
-#endif
-//OTP Code End
-
-
-
 
 static void OV5648MIPI_Write_Shutter(kal_uint16 iShutter)
 {
@@ -550,13 +333,13 @@ static kal_uint16 OV5648MIPI_Reg2Gain(const kal_uint8 iReg)
 }
 #endif
 
- kal_uint16 OV5648MIPI_Gain2Reg(const kal_uint16 iGain)
+ kal_uint8 OV5648MIPI_Gain2Reg(const kal_uint16 iGain)
 {
     kal_uint16 iReg = 0x0000;
     
     iReg = ((iGain / BASEGAIN) << 4) + ((iGain % BASEGAIN) * 16 / BASEGAIN);
-    iReg = iReg & 0xFFFF;
-    return (kal_uint16)iReg;
+    iReg = iReg & 0xFF;
+    return (kal_uint8)iReg;
 }
 
 
@@ -578,7 +361,7 @@ static kal_uint16 OV5648MIPI_Reg2Gain(const kal_uint8 iReg)
 *************************************************************************/
 kal_uint16 OV5648MIPI_SetGain(kal_uint16 iGain)
 {
-    kal_uint16 iRegGain;
+    kal_uint8 iRegGain;
 
     OV5648MIPI_sensor.gain = iGain;
 
@@ -588,21 +371,19 @@ kal_uint16 OV5648MIPI_SetGain(kal_uint16 iGain)
     /* Total gain = M + N /16 X   */
 
     //
-    if(iGain < BASEGAIN || iGain > 32 * BASEGAIN){
+    if(iGain >= BASEGAIN && iGain <= 32 * BASEGAIN){
+    
+        iRegGain = OV5648MIPI_Gain2Reg(iGain);
+
+        #ifdef OV5648MIPI_DRIVER_TRACE
+            SENSORDB("iGain = %d , iRegGain = 0x%x ", iGain, iRegGain);
+        #endif
+
+        if (iRegGain < 0x10) iRegGain = 0x10;
+        OV5648MIPI_write_cmos_sensor(0x350b, iRegGain);
+    } else {
         SENSORDB("Error gain setting");
-
-        if(iGain < BASEGAIN) iGain = BASEGAIN;
-        if(iGain > 32 * BASEGAIN) iGain = 32 * BASEGAIN;        
     }
- 
-    iRegGain = OV5648MIPI_Gain2Reg(iGain);
-
-    #ifdef OV5648MIPI_DRIVER_TRACE
-        SENSORDB("iGain = %d , iRegGain = 0x%x ", iGain, iRegGain);
-    #endif
-
-    OV5648MIPI_write_cmos_sensor(0x350a, iRegGain >> 8);
-    OV5648MIPI_write_cmos_sensor(0x350b, iRegGain & 0xFF);    
     
     return iGain;
 }   /*  OV5648MIPI_SetGain  */
@@ -1086,8 +867,8 @@ static void OV5648MIPI_Sensor_Init(void)
     OV5648MIPI_write_cmos_sensor(0x3817, 0x00); // hsync start
 
     // Horizontal binning
-    OV5648MIPI_write_cmos_sensor(0x3820, 0x0e); //0x08 flip off, v bin off
-    OV5648MIPI_write_cmos_sensor(0x3821, 0x01); //0x07 mirror on, h bin on
+    OV5648MIPI_write_cmos_sensor(0x3820, 0x08); // flip off, v bin off
+    OV5648MIPI_write_cmos_sensor(0x3821, 0x07); // mirror on, h bin on
     
     OV5648MIPI_write_cmos_sensor(0x3826, 0x03);
     OV5648MIPI_write_cmos_sensor(0x3829, 0x00);
@@ -1131,22 +912,6 @@ static void OV5648MIPI_Sensor_Init(void)
     OV5648MIPI_write_cmos_sensor(0x4521, 0x00);
     OV5648MIPI_write_cmos_sensor(0x4511, 0x22);
 
-    //update DPC settings
-    OV5648MIPI_write_cmos_sensor(0x5780, 0xfc);
-    OV5648MIPI_write_cmos_sensor(0x5781, 0x1f);
-    OV5648MIPI_write_cmos_sensor(0x5782, 0x03);
-    OV5648MIPI_write_cmos_sensor(0x5786, 0x20);
-    OV5648MIPI_write_cmos_sensor(0x5787, 0x40);
-    OV5648MIPI_write_cmos_sensor(0x5788, 0x08);
-    OV5648MIPI_write_cmos_sensor(0x5789, 0x08);
-    OV5648MIPI_write_cmos_sensor(0x578a, 0x02);
-    OV5648MIPI_write_cmos_sensor(0x578b, 0x01);
-    OV5648MIPI_write_cmos_sensor(0x578c, 0x01);
-    OV5648MIPI_write_cmos_sensor(0x578d, 0x0c);
-    OV5648MIPI_write_cmos_sensor(0x578e, 0x02);
-    OV5648MIPI_write_cmos_sensor(0x578f, 0x01);
-    OV5648MIPI_write_cmos_sensor(0x5790, 0x01);
-
     OV5648MIPI_write_cmos_sensor(0x4800, 0x14); // MIPI line sync enable
     
     OV5648MIPI_write_cmos_sensor(0x481f, 0x3c); // MIPI clk prepare min
@@ -1169,19 +934,27 @@ static void OV5648MIPI_Sensor_Init(void)
     OV5648MIPI_write_cmos_sensor(0x5b01, 0x40);
     OV5648MIPI_write_cmos_sensor(0x5b02, 0x00);
     OV5648MIPI_write_cmos_sensor(0x5b03, 0xf0);
-    
+
+    //Update DPC settings
+    OV5648MIPI_write_cmos_sensor(0x5780, 0xfc);
+    OV5648MIPI_write_cmos_sensor(0x5781, 0x1f);
+    OV5648MIPI_write_cmos_sensor(0x5782, 0x03);
+    OV5648MIPI_write_cmos_sensor(0x5786, 0x20);
+    OV5648MIPI_write_cmos_sensor(0x5787, 0x40);
+    OV5648MIPI_write_cmos_sensor(0x5788, 0x08);
+    OV5648MIPI_write_cmos_sensor(0x5789, 0x08);
+    OV5648MIPI_write_cmos_sensor(0x578a, 0x02);
+    OV5648MIPI_write_cmos_sensor(0x578b, 0x01);
+    OV5648MIPI_write_cmos_sensor(0x578c, 0x01);
+    OV5648MIPI_write_cmos_sensor(0x578d, 0x0c);
+    OV5648MIPI_write_cmos_sensor(0x578e, 0x02);
+    OV5648MIPI_write_cmos_sensor(0x578f, 0x01);
+    OV5648MIPI_write_cmos_sensor(0x5790, 0x01);
+
     //OV5648MIPI_write_cmos_sensor(0x350b, 0x80); // gain = 8x
     OV5648MIPI_write_cmos_sensor(0x4837, 0x17); // MIPI global timing
 
     OV5648MIPI_write_cmos_sensor(0x0100, 0x01); // wake up from software sleep
-
-//OTP Code Start
-#ifdef OV5648MIPI_USE_OTP
-    //wb otp update
-    update_otp();
-#endif
-//OTP Code End
-
 
 #ifdef OV5648MIPI_DRIVER_TRACE
     SENSORDB("Exit!");
@@ -1254,10 +1027,10 @@ static void OV5648MIPI_Preview_Setting(void)
        *   ISP and Sensor flip or mirror register bit should be the same!!
        *
        ********************************************************/
-    OV5648MIPI_write_cmos_sensor(0x3820, 0x0e); //0x08 flip off, v bin off
-    OV5648MIPI_write_cmos_sensor(0x3821, 0x01); //0x07 mirror on, h bin on
+    OV5648MIPI_write_cmos_sensor(0x3820, 0x08); // flip off, v bin off
+    OV5648MIPI_write_cmos_sensor(0x3821, 0x07); // mirror on, h bin on
 
-    
+
     OV5648MIPI_write_cmos_sensor(0x4004, 0x02); // black line number
     //OV5648MIPI_write_cmos_sensor(0x4005, 0x1a); // blc normal freeze
     OV5648MIPI_write_cmos_sensor(0x4005, 0x18); // blc normal freeze
@@ -1339,8 +1112,8 @@ static void OV5648MIPI_Capture_Setting(void)
        *   ISP and Sensor flip or mirror register bit should be the same!!
        *
        ********************************************************/
-    OV5648MIPI_write_cmos_sensor(0x3820, 0x46); //0x40 flip off, v bin off
-    OV5648MIPI_write_cmos_sensor(0x3821, 0x00); //0x06 mirror on, v bin off
+    OV5648MIPI_write_cmos_sensor(0x3820, 0x40); // flip off, v bin off
+    OV5648MIPI_write_cmos_sensor(0x3821, 0x06); // mirror on, v bin off
 
     
     OV5648MIPI_write_cmos_sensor(0x4004, 0x04); // black line number
@@ -1356,6 +1129,409 @@ static void OV5648MIPI_Capture_Setting(void)
     SENSORDB("Exit!");
 #endif
 }   /*  OV5648MIPI_Capture_Setting  */
+
+
+#ifdef OV5648MIPI_USE_OTP
+
+/******************************************************************************
+OTP memory Map:
+                          Group 1
+0x05~0x09    Bank 0:0x3d05~0x3d09    Module info
+0x0a~0x0f     Bank 0:0x3d0a~0x3d0f    AWB
+                          Group 2
+0x12~0x16    Bank 1:0x3d00~0x3d04    Module info
+0x17~0x1c    Bank 1:0x3d05~0x3d0a    AWB
+******************************************************************************/
+
+
+/******************************************************************************
+Function:        // OV5648MIPI_OTP_Clear
+Description:    // Disable  OTP read and clear otp buffers, must called wehen read anothe bank.
+Input:            //
+Output:         //
+Return:         //
+Others:         //
+******************************************************************************/
+void OV5648MIPI_OTP_Clear(void)
+{
+    int i = 0;
+    //Disable OTP read
+    OV5648MIPI_write_cmos_sensor(0x3d81, 0x00);
+
+    for ( i =0; i<16; i++)//16 regs in on bank
+    {
+        //Clear otp buffers
+        OV5648MIPI_write_cmos_sensor(0x3d00 + i, 0x00);//0x3d00~0x3d0f
+    }
+
+}
+
+/******************************************************************************
+Function:        // OV5648MIPI_Select_bank
+Description:    // Select the specific bankNum. OTP will be read into IC's internel men.
+Input:            //bankNum: bank number ,must be 0, or 1;
+Output:         //
+Return:         //KAL_TRUE for sucess, KAL_FALSE for fails
+Others:         //
+******************************************************************************/
+bool OV5648MIPI_Select_bank(int bankNum)
+{
+    SENSORDB("%s, select bank num :%d\n",__func__, bankNum);
+
+     if (OV5648MIPI_OTP_BANK0 == bankNum)
+    {
+        OV5648MIPI_write_cmos_sensor(0x3d84, 0xc0);
+        OV5648MIPI_write_cmos_sensor(0x3d85, 0x00);//bank0
+        OV5648MIPI_write_cmos_sensor(0x3d86, 0x0f);
+        OV5648MIPI_write_cmos_sensor(0x3d81, 0x01);//start read
+
+        mdelay(3);//must delay 3ms
+        return KAL_TRUE;
+    }
+    else if (OV5648MIPI_OTP_BANK1 ==bankNum)
+    {
+        OV5648MIPI_write_cmos_sensor(0x3d84, 0xc0);
+        OV5648MIPI_write_cmos_sensor(0x3d85, 0x10);//bank1
+        OV5648MIPI_write_cmos_sensor(0x3d86, 0x1f);
+        OV5648MIPI_write_cmos_sensor(0x3d81, 0x01);//start read
+
+        mdelay(3);//must delay 3ms
+        return KAL_TRUE;
+    }
+    else
+    {
+        SENSORDB("%s, Error bank number!\n",__func__);
+        return KAL_FALSE;
+    }
+
+
+}
+
+/******************************************************************************
+Function:        // OV548MIPI_OTP_Search_Bank
+Description:    // search which bank otp lays in
+Input:            //
+Output:         //
+Return:         //bank num 0,1,or -1 for error bank:OV5648MIPI_OTP_BANK_ERROR
+Others:         //
+******************************************************************************/
+int OV548MIPI_OTP_Search_Bank()
+{
+    kal_uint32 uGroupFlag = 0;
+    kal_uint32 uValidate = 0;
+    //module info from group2,bank1 first
+    if (KAL_FALSE == OV5648MIPI_Select_bank(OV5648MIPI_OTP_BANK1))
+        return OV5648MIPI_OTP_BANK_ERROR;
+
+    //read group flag
+    uGroupFlag = OV5648MIPI_read_cmos_sensor(0x3d00);
+
+
+    SENSORDB("%s,group 2 uGroupFlag:0x%x\n",__func__, uGroupFlag);
+    uValidate = (uGroupFlag >> OTP_GROUP_CHECK_SHIFT) & OTP_GROUP_CHECK_FLAG ;
+
+    OV5648MIPI_OTP_Clear();
+
+    if (OTP_GROUP_VALID == uValidate)
+    {
+        SENSORDB("%s, Module info lays in group 2, bank1\n",__func__);
+        return OV5648MIPI_OTP_BANK1;//bank1 valid
+    }
+    else if ((OTP_GROUP_INVALID == uValidate) ||(OTP_GROUP_UNKOWN ==uValidate))
+    {
+        SENSORDB("%s, group 2 is invalid\n",__func__);
+        return OV5648MIPI_OTP_BANK_ERROR;
+    }
+
+    //go on search bank 0 only when group flag is OTP_GROUP_EMPTY
+    if (KAL_FALSE == OV5648MIPI_Select_bank(OV5648MIPI_OTP_BANK0))
+        return OV5648MIPI_OTP_BANK_ERROR;
+
+    //read group flag
+    uGroupFlag = OV5648MIPI_read_cmos_sensor(0x3d05);
+
+
+    SENSORDB("%s,group 1 uGroupFlag:0x%x\n",__func__, uGroupFlag );
+    uValidate = (uGroupFlag >> OTP_GROUP_CHECK_SHIFT) & OTP_GROUP_CHECK_FLAG ;
+
+    OV5648MIPI_OTP_Clear();
+
+    if (OTP_GROUP_VALID == uValidate)
+    {
+        SENSORDB("%s, Module info lays in group 1\n",__func__);
+        return OV5648MIPI_OTP_BANK0;//bank0 valid
+    }
+    else
+    {
+        SENSORDB("%s,  Error !No Module inf found in OTP\n",__func__);
+        return OV5648MIPI_OTP_BANK_ERROR;//no correct otp
+    }
+
+}
+
+/******************************************************************************
+Function:        // OV5648MIPI_OTP_Read_ModuleInfo_AWB
+Description:    // read awb  info OTP.
+Input:            //current_otp, pointer to otp struct to store otp data
+Output:         //
+Return:         //KAL_TRUE for read cucessful, KAL_FALSE for read otp fails.
+Others:         //
+******************************************************************************/
+bool OV5648MIPI_OTP_Read_ModuleInfo_AWB(struct OV5648MIPI_Otp_Struct * otp_ptr, kal_uint32 bankNum)
+{
+    kal_uint32 rG = 0;// r/g ratio
+    kal_uint32 bG = 0;// b/g ratio
+
+    switch (bankNum)
+    {
+        case OV5648MIPI_OTP_BANK0:
+            if (KAL_FALSE == OV5648MIPI_Select_bank(OV5648MIPI_OTP_BANK0))
+            {
+                SENSORDB("%s,  select bank error!",__func__);
+                return KAL_FALSE;//otp read fail
+            }
+            //Module info:Bank 0:0x3d05~0x3d09
+            otp_ptr->iProduct_Year = OV5648MIPI_read_cmos_sensor(0x3d05);
+            otp_ptr->iProduct_Month= OV5648MIPI_read_cmos_sensor(0x3d06);
+            otp_ptr->iProduct_Date = OV5648MIPI_read_cmos_sensor(0x3d07);
+            otp_ptr->iCamera_Id = OV5648MIPI_read_cmos_sensor(0x3d08);
+            otp_ptr->iSupplier_Version_Id = OV5648MIPI_read_cmos_sensor(0x3d09);
+            //AWB:Bank 0:0x3d0a~0x3d0f
+            otp_ptr->iWB_RG_H = OV5648MIPI_read_cmos_sensor(0x3d0a);
+            otp_ptr->iWB_RG_L = OV5648MIPI_read_cmos_sensor(0x3d0b);
+            otp_ptr->iWB_BG_H = OV5648MIPI_read_cmos_sensor(0x3d0c);
+            otp_ptr->iWB_BG_L = OV5648MIPI_read_cmos_sensor(0x3d0d);
+            otp_ptr->iWB_GbGr_H = OV5648MIPI_read_cmos_sensor(0x3d0e);
+            otp_ptr->iWB_GbGr_L= OV5648MIPI_read_cmos_sensor(0x3d0f);
+            OV5648MIPI_OTP_Clear();
+            break;
+        case OV5648MIPI_OTP_BANK1:
+             if (KAL_FALSE == OV5648MIPI_Select_bank(OV5648MIPI_OTP_BANK1))
+            {
+                 SENSORDB("%s,  select bank error!",__func__);
+                 return KAL_FALSE;//otp read fail
+            }
+            //Module info:Bank 0:0x3d00~0x3d04
+            otp_ptr->iProduct_Year = OV5648MIPI_read_cmos_sensor(0x3d00);
+            otp_ptr->iProduct_Month= OV5648MIPI_read_cmos_sensor(0x3d01);
+            otp_ptr->iProduct_Date = OV5648MIPI_read_cmos_sensor(0x3d02);
+            otp_ptr->iCamera_Id = OV5648MIPI_read_cmos_sensor(0x3d03);
+            otp_ptr->iSupplier_Version_Id = OV5648MIPI_read_cmos_sensor(0x3d04);
+            //AWB:Bank 1:0x3d05~0x3d0a
+            otp_ptr->iWB_RG_H = OV5648MIPI_read_cmos_sensor(0x3d05);
+            otp_ptr->iWB_RG_L = OV5648MIPI_read_cmos_sensor(0x3d06);
+            otp_ptr->iWB_BG_H = OV5648MIPI_read_cmos_sensor(0x3d07);
+            otp_ptr->iWB_BG_L = OV5648MIPI_read_cmos_sensor(0x3d08);
+            otp_ptr->iWB_GbGr_H = OV5648MIPI_read_cmos_sensor(0x3d09);
+            otp_ptr->iWB_GbGr_L= OV5648MIPI_read_cmos_sensor(0x3d0a);
+            OV5648MIPI_OTP_Clear();
+            break;
+        case OV5648MIPI_OTP_BANK_ERROR: 
+            SENSORDB("%s,  Error !No OTP or Invalid OTP",__func__);
+            return KAL_FALSE;//otp read fail
+        default:
+            SENSORDB("%s,  Error Bank number!",__func__);
+            return KAL_FALSE;//otp read fail
+    }
+
+    //calculate rG and bG
+    rG = (otp_ptr->iWB_RG_H << 8) + otp_ptr->iWB_RG_L;
+    bG =(otp_ptr->iWB_BG_H<< 8) + otp_ptr->iWB_BG_L;
+
+    if ((0 != rG) && (0 != bG))//rG and bG all not zero, so awb info is correct
+    {
+        SENSORDB("%s, OTP read sucessfully!",__func__);
+        return KAL_TRUE;//otp read sucess
+    }
+    else
+    {
+        SENSORDB("%s,  Error !No OTP or Invalid OTP",__func__);
+        return KAL_FALSE;//otp read fail
+    }
+
+}
+
+/******************************************************************************
+Function:        // OV5648MIPI_Update_Awb_Gain
+Description:    // Update the RGB AWB gain to sensor
+Input:            //RGB gain
+Output:         //
+Return:         //
+Others:         //
+******************************************************************************/
+int OV5648MIPI_Update_Awb_Gain(kal_uint32 R_gain, kal_uint32 G_gain, kal_uint32 B_gain)
+{
+    SENSORDB("%s, R_gain:0x%x,G_gain:0x%x,B_gain:0x%x\n",__func__,R_gain,G_gain,B_gain);
+    if (R_gain>0x400) {
+        OV5648MIPI_write_cmos_sensor(0x5186, R_gain>>8);
+        OV5648MIPI_write_cmos_sensor(0x5187, R_gain & 0x00ff);
+    }
+
+    if (G_gain>0x400) {
+        OV5648MIPI_write_cmos_sensor(0x5188, G_gain>>8);
+        OV5648MIPI_write_cmos_sensor(0x5189, G_gain & 0x00ff);
+    }
+
+    if (B_gain>0x400) {
+        OV5648MIPI_write_cmos_sensor(0x518a, B_gain>>8);
+        OV5648MIPI_write_cmos_sensor(0x518b, B_gain & 0x00ff);
+    }
+
+    return 0;
+}
+
+/******************************************************************************
+Function:       // OV5648MIPI_Otp_Debug
+Description:   // Only for debug use
+Input:           //
+Output:        //
+Return:         //
+Others:         //
+******************************************************************************/
+void OV5648MIPI_Otp_Debug(struct OV5648MIPI_Otp_Struct  otp_ptr)
+{
+    SENSORDB("%s,otp_ptr.iProduct_Year:%d\n",__func__,otp_ptr.iProduct_Year);
+    SENSORDB("%s,otp_ptr.iProduct_Month:%d\n",__func__,otp_ptr.iProduct_Month);
+    SENSORDB("%s,otp_ptr.iProduct_Date:%d\n",__func__,otp_ptr.iProduct_Date);
+    SENSORDB("%s,otp_ptr.iCamera_Id:0x%x\n",__func__,otp_ptr.iCamera_Id);
+    SENSORDB("%s,otp_ptr.iSupplier_Version_Id:0x%x\n",__func__,otp_ptr.iSupplier_Version_Id);
+    SENSORDB("%s,otp_ptr.iWB_RG:0x%x\n",__func__, (otp_ptr.iWB_RG_H<<8) + otp_ptr.iWB_RG_L);
+    SENSORDB("%s,otp_ptr.iWB_BG:0x%x\n",__func__, (otp_ptr.iWB_BG_H<<8) +otp_ptr.iWB_BG_L);
+    SENSORDB("%s,otp_ptr.iWB_GbGr:0x%x\n",__func__,(otp_ptr.iWB_GbGr_H<<8) + otp_ptr.iWB_GbGr_L);
+
+}
+
+/******************************************************************************
+Function:        // OV5648MIPI_Update_Otp
+Description:    //Check, read and update AWB OTP.
+Input:            //
+Output:         //
+Return:         // KAL_TRUE, update success,KAL_FALSE: no OTP
+Others:         //
+******************************************************************************/
+bool OV5648MIPI_Update_Otp(void)
+{
+    struct OV5648MIPI_Otp_Struct current_otp;
+
+    kal_uint32 R_gain =0, G_gain =0, B_gain =0, G_gain_R =0, G_gain_B =0;
+    kal_uint32 rg =0, bg =0;
+
+    kal_uint32 uBankNum = OV5648MIPI_OTP_BANK_ERROR;
+
+
+    SENSORDB("%s Start!\n", __func__);
+
+    memset(&current_otp, 0, sizeof(struct OV5648MIPI_Otp_Struct));
+
+
+    //search which bank otp info lays in   
+    uBankNum = OV548MIPI_OTP_Search_Bank();
+    if (KAL_FALSE == OV5648MIPI_OTP_Read_ModuleInfo_AWB(&current_otp, uBankNum))
+    {
+        SENSORDB("%s Error!no AWB data in OTP!\n", __func__);
+        return KAL_FALSE;
+    }
+
+    OV5648MIPI_Otp_Debug(current_otp);
+
+    rg = (current_otp.iWB_RG_H << 8) + current_otp.iWB_RG_L;
+    bg = (current_otp.iWB_BG_H << 8) + current_otp.iWB_BG_L;
+
+
+    if ((0==rg) || (0==bg))//make sure rg and bg are not zero
+    {
+        SENSORDB("%s, Error Zero rg or bg, rg:%d, bg:%d\n", __func__, rg, bg);
+        return KAL_FALSE;
+    }
+
+    SENSORDB("%s, r/g:0x%x, b/g:0x%x\n", __func__, rg, bg);
+
+    //calculate G gain
+    //0x400 = 1x gain
+    if(bg < BG_Ratio_Typical) {
+        if (rg< RG_Ratio_Typical) {
+            // current_otp.bg_ratio < BG_Ratio_typical &&
+            // current_otp.rg_ratio < RG_Ratio_typical
+            G_gain = 0x400;
+            B_gain = (0x400 * BG_Ratio_Typical) / bg;
+            R_gain = (0x400 * RG_Ratio_Typical) / rg;
+        }
+        else {
+            // current_otp.bg_ratio < BG_Ratio_typical &&
+            // current_otp.rg_ratio >= RG_Ratio_typical
+            R_gain = 0x400;
+            G_gain = (0x400 * rg) / RG_Ratio_Typical;
+            B_gain = (G_gain * BG_Ratio_Typical) /bg;
+        }
+    }
+    else {
+        if (rg < RG_Ratio_Typical) {
+            // current_otp.bg_ratio >= BG_Ratio_typical &&
+            // current_otp.rg_ratio < RG_Ratio_typical
+            B_gain = 0x400;
+            G_gain = (0x400 * bg) / BG_Ratio_Typical;
+            R_gain = (G_gain * RG_Ratio_Typical) / rg;
+        }
+        else {
+            // current_otp.bg_ratio >= BG_Ratio_typical &&
+            // current_otp.rg_ratio >= RG_Ratio_typical
+            G_gain_B = (0x400 * bg) / BG_Ratio_Typical;
+            G_gain_R = (0x400 * rg) / RG_Ratio_Typical;
+
+            if(G_gain_B > G_gain_R ) {
+                B_gain = 0x400;
+                G_gain = G_gain_B;
+                R_gain = (G_gain * RG_Ratio_Typical) /rg;
+            }
+            else {
+                R_gain = 0x400;
+                G_gain = G_gain_R;
+                B_gain = (G_gain * BG_Ratio_Typical) / bg;
+            }
+        }
+    }
+    SENSORDB("%s, R_gain:0x%x,G_gain:0x%x,B_gain:0x%x\n", __func__,R_gain,G_gain,B_gain);
+
+    spin_lock(&ov5648mipi_drv_lock);
+    gR_gain = R_gain;
+    gG_gain = G_gain;
+    gB_gain = B_gain;
+    OV5648MIPI_otp_read_flag = OTP_VALID;//stamp a flag
+    spin_unlock(&ov5648mipi_drv_lock);
+
+
+    SENSORDB("%s END!\n", __func__);
+
+    return KAL_TRUE;
+
+}
+
+/******************************************************************************
+Function:        // OV5648MIPI_Check_OTP
+Description:    // check if otp info has been read out succcessfully
+Input:            //
+Output:         //pFeatureReturnPara32 :0 OTP empty, 1 OTP exist.
+Return:         //
+Others:         //
+******************************************************************************/
+UINT32 OV5648MIPI_Check_OTP(UINT32 *pFeatureReturnPara32)
+{
+    if (NULL == pFeatureReturnPara32)
+    {
+        SENSORDB("%s Error!Null poiner", __func__);
+        return ERROR_INVALID_PARA;
+    }
+    //check if awb/module info/vcm OTP exist
+    if ( OTP_VALID == OV5648MIPI_otp_read_flag )
+        *pFeatureReturnPara32 = 1;//opt exist
+    else
+        *pFeatureReturnPara32 = 0;//no OTP
+
+    SENSORDB("OV5648MIPI_Check_OTP: OV5648MIPI_otp_read_flag:0x%x\n", OV5648MIPI_otp_read_flag);
+    return ERROR_NONE;
+}
+
+#endif
 
 
 /*************************************************************************
@@ -1388,6 +1564,19 @@ UINT32 OV5648MIPIOpen(void)
     
     /* initail sequence write in  */
     OV5648MIPI_Sensor_Init();
+
+#ifdef OV5648MIPI_USE_OTP
+    //OTP not read or not exist, try to read
+    if (OTP_VALID != OV5648MIPI_otp_read_flag)
+    {
+        OV5648MIPI_Update_Otp();
+    }
+    else
+    {
+        SENSORDB("%s :AWB OTP has already been read out!\n",__func__);
+    }
+    OV5648MIPI_Update_Awb_Gain(gR_gain, gG_gain, gB_gain);
+#endif
 
     spin_lock(&ov5648mipi_drv_lock);
     OV5648MIPIDuringTestPattern = KAL_FALSE;    
@@ -1424,6 +1613,15 @@ UINT32 OV5648MIPIOpen(void)
 *************************************************************************/
 UINT32 OV5648GetSensorID(UINT32 *sensorID) 
 {
+    //Optimize search process, avoid unneccesary ID reading.
+    extern kal_bool searchMainSensor;
+    if (KAL_TRUE == searchMainSensor)//used for sub
+    {
+         SENSORDB("OV5648MIPIGetSensorID  searchMainSensor = KAL_TRUE!\n ");
+        *sensorID = 0xFFFFFFFF;
+        return ERROR_SENSOR_CONNECT_FAIL;
+    }
+
     // check if sensor ID correct
     *sensorID=((OV5648MIPI_read_cmos_sensor(0x300A) << 8) | OV5648MIPI_read_cmos_sensor(0x300B));   
 
@@ -1599,6 +1797,11 @@ UINT32 OV5648MIPIGetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
             pSensorInfo->SensorCameraPreviewFrameRate = 30; /* not use */
             break;
     }
+
+    //cts test,for FOV view angle
+    pSensorInfo->SensorHorFOV = 75;
+    pSensorInfo->SensorVerFOV = 60;
+
 
     pSensorInfo->SensorFullResolutionX = OV5648MIPI_IMAGE_SENSOR_FULL_WIDTH; /* not use */
     pSensorInfo->SensorFullResolutionY = OV5648MIPI_IMAGE_SENSOR_FULL_HEIGHT; /* not use */
@@ -2034,10 +2237,15 @@ UINT32 OV5648MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
         case SENSOR_FEATURE_SET_TEST_PATTERN:
             OV5648MIPI_SetTestPatternMode((BOOL)*pFeatureData16);
             break;
-        case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE://for factory mode auto testing             
+        case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE://for factory mode auto testing
             *pFeatureReturnPara32= OV5648MIPI_TEST_PATTERN_CHECKSUM;
-            *pFeatureParaLen=4;                             
-             break;            
+            *pFeatureParaLen=4;
+             break;
+#ifdef OV5648MIPI_USE_OTP
+        case SENSOR_FEATURE_VALIDATE_OTP:
+            OV5648MIPI_Check_OTP(pFeatureReturnPara32);//check OTP exist
+            break;
+#endif
         default:
             break;
     }

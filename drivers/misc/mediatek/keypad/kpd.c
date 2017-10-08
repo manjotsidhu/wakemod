@@ -34,7 +34,7 @@
 //#define MTK_KP_WAKESOURCE	/* this is for auto set wake up source */
 
 
-#define FORCE_POWERKEY
+#define MTK_KP_WAKESOURCE//this is for auto set wake up source
 #define FORCE_POWERKEY_SECONDS   8
 struct timer_list timer;
 //extern void arch_reset(char mode, const char *cmd);
@@ -45,6 +45,7 @@ static bool kpd_suspend = false;
 static int kpd_show_hw_keycode = 1;
 static int kpd_show_register = 1;
 static volatile int call_status = 0;
+bool power_key_ps = false;
 
 /*for kpd_memory_setting() function*/
 static u16 kpd_keymap[KPD_NUM_KEYS];
@@ -216,7 +217,7 @@ static const u16 kpd_auto_keymap[] = {
 #define AEE_VOLUMEDOWN_BIT	1
 #define AEE_DELAY_TIME		15
 /* enable volup + voldown was pressed 5~15 s Trigger aee manual dump */
-#define AEE_ENABLE_5_15		0
+#define AEE_ENABLE_5_15		1
 static struct hrtimer aee_timer;
 static unsigned long aee_pressed_keys;
 static bool aee_timer_started;
