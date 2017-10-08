@@ -9,6 +9,6 @@ ifeq ($(CONFIG_MTK_EPL2182),y)
 obj-y	+=  EPL2182/
 endif
 
-ifeq ($(CONFIG_MTK_tmd2771_HW_auto),y)
+ifeq ($(CONFIG_MTK_TMD2771_HW_AUTO),y)
 obj-y	+=  tmd2771_HW_auto/
 endif

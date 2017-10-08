@@ -301,7 +301,7 @@ static int get_tmd2771_register(struct tmd2771_priv  *aps, u8 reg, int flag)
  * DF:Device Factor
  * alsGain: ALS Gain
  * aTime: ALS Timing
- * ALSIT = 2.72ms * (256 ¨C ATIME) = 2.72ms * (256-0xDB) =  100ms
+ * ALSIT = 2.72ms * (256 \A8C ATIME) = 2.72ms * (256-0xDB) =  100ms
  */
 
 /*
@@ -817,7 +817,7 @@ static void aps_tmd2771_work_func(struct work_struct *work)
         return;
     }
 
-    APS_LOG("aps_tmd2771_work_func enable:%d status:%x\n", aps->enable, tmd2711_irq_flag);
+    APS_LOG("aps_tmd2771_work_func enable:%ld status:%x\n", aps->enable, tmd2711_irq_flag);
 
     /* proximity flag is open and the interrupt belongs to proximity */
     if ((test_bit(CMC_BIT_PS, &aps->enable)) && (tmd2711_irq_flag & TMD2771_STATUS_PROXIMITY_BIT))
@@ -1218,7 +1218,7 @@ static long tmd2771_unlocked_ioctl(struct file *file, unsigned int cmd,
             {
                 if(err = tmd2771_enable_ps(obj->client, 1))
                 {
-                    APS_ERR("enable ps fail: %d\n", err); 
+                    APS_ERR("enable ps fail: %ld\n", err); 
                     goto err_out;
                 }
                 
@@ -1228,7 +1228,7 @@ static long tmd2771_unlocked_ioctl(struct file *file, unsigned int cmd,
             {
                 if(err = tmd2771_enable_ps(obj->client, 0))
                 {
-                    APS_ERR("disable ps fail: %d\n", err); 
+                    APS_ERR("disable ps fail: %ld\n", err); 
                     goto err_out;
                 }
                 
@@ -1273,7 +1273,7 @@ static long tmd2771_unlocked_ioctl(struct file *file, unsigned int cmd,
             {
                 if(err = tmd2771_enable_als(obj->client, 1))
                 {
-                    APS_ERR("enable als fail: %d\n", err); 
+                    APS_ERR("enable als fail: %ld\n", err); 
                     goto err_out;
                 }
                 set_bit(CMC_BIT_ALS, &obj->enable);
@@ -1282,7 +1282,7 @@ static long tmd2771_unlocked_ioctl(struct file *file, unsigned int cmd,
             {
                 if(err = tmd2771_enable_als(obj->client, 0))
                 {
-                    APS_ERR("disable als fail: %d\n", err); 
+                    APS_ERR("disable als fail: %ld\n", err); 
                     goto err_out;
                 }
                 clear_bit(CMC_BIT_ALS, &obj->enable);
