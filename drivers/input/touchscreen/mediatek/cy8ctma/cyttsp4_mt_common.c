@@ -1,8 +1,4 @@
-/* BEGIN PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/
 //add Touch driver for G610-T11
-/* BEGIN PN:DTS2013012601133 ,Modified by l00184147, 2013/1/26*/ 
-/* BEGIN PN:DTS2013011401860  ,Modified by l00184147, 2013/1/14*/
-/* BEGIN PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
 /*
  * cyttsp4_mt_common.c
  * Cypress TrueTouch(TM) Standard Product V4 Multi-touch module.
@@ -33,17 +29,17 @@
  */
 
 #include "cyttsp4_mt_common.h"
+#ifdef CONFIG_HW_HAVE_TP_THREAD
 #include <linux/hardware_self_adapt.h>
+#endif
 
 struct hoster_mode tp_hoster={0,0,0,0,0};
 extern int set_signal_disparity(unsigned long status);
 extern unsigned long glove_status;
 static void cyttsp4_lift_all(struct cyttsp4_mt_data *md)
 {
-  /* BEGIN PN:DTS2013041400018 ,Added by l00184147, 2013/4/12*/
   if (!md->si)
 	return;
-  /* END PN:DTS2013041400018 ,Added by l00184147, 2013/4/12*/
   
   if (md->num_prv_tch != 0) {
 	if (md->mt_function.report_slot_liftoff)
@@ -405,7 +401,6 @@ static int cyttsp4_mt_attention(struct cyttsp4_device *ttsp)
 
   dev_vdbg(dev, "%s\n", __func__);
 
-  /* BEGIN PN:DTS2013041400018 ,Modified by l00184147, 2013/4/12*/
   mutex_lock(&md->report_lock);
   if (!md->is_suspended) {
   /* core handles handshake */
@@ -415,7 +410,6 @@ static int cyttsp4_mt_attention(struct cyttsp4_device *ttsp)
 			__func__);
   }
   mutex_unlock(&md->report_lock);
-  /* END PN:DTS2013041400018 ,Modified by l00184147, 2013/4/12*/
 
   if (rc < 0)
 	dev_err(dev, "%s: xy_worker error r=%d\n", __func__, rc);
@@ -431,11 +425,9 @@ static int cyttsp4_startup_attention(struct cyttsp4_device *ttsp)
 
   dev_vdbg(dev, "%s\n", __func__);
 
-  /* BEGIN PN:DTS2013041400018 ,Modified by l00184147, 2013/4/12*/
   mutex_lock(&md->report_lock);
   cyttsp4_lift_all(md);
   mutex_unlock(&md->report_lock);
-  /* END PN:DTS2013041400018 ,Modified by l00184147, 2013/4/12*/  
   
   return rc;
 }
@@ -466,14 +458,10 @@ static int cyttsp4_mt_open(struct input_dev *input)
 static void cyttsp4_mt_close(struct input_dev *input)
 {
   struct device *dev = input->dev.parent;
-  /* BEGIN PN:DTS2013041400018 ,Deleted by l00184147, 2013/4/12*/
-  /* END PN:DTS2013041400018 ,Deleted by l00184147, 2013/4/12*/
   struct cyttsp4_device *ttsp =
 	container_of(dev, struct cyttsp4_device, dev);
 
   dev_dbg(dev, "%s\n", __func__);
-  /* BEGIN PN:DTS2013041400018 ,Deleted by l00184147, 2013/4/12*/
-  /* END PN:DTS2013041400018 ,Deleted by l00184147, 2013/4/12*/
   cyttsp4_unsubscribe_attention(ttsp, CY_ATTEN_IRQ,
 								cyttsp4_mt_attention, CY_MODE_OPERATIONAL);
 
@@ -489,7 +477,6 @@ static void cyttsp4_mt_early_suspend(struct early_suspend *h)
   struct cyttsp4_mt_data *md =
 	container_of(h, struct cyttsp4_mt_data, es);
   struct device *dev = &md->ttsp->dev;
-  /* BEGIN PN:DTS2013041400018 ,Modified by l00184147, 2013/4/12*/
   dev_dbg(dev, "%s\n", __func__);
   
   if (md->si){
@@ -498,7 +485,6 @@ static void cyttsp4_mt_early_suspend(struct early_suspend *h)
 	cyttsp4_lift_all(md);
 	mutex_unlock(&md->report_lock);
   }
-  /* END PN:DTS2013041400018 ,Modified by l00184147, 2013/4/12*/
 }
 
 static void cyttsp4_mt_late_resume(struct early_suspend *h)
@@ -508,11 +494,9 @@ static void cyttsp4_mt_late_resume(struct early_suspend *h)
   struct device *dev = &md->ttsp->dev;
 
   dev_dbg(dev, "%s\n", __func__);
-  /* BEGIN PN:DTS2013041400018 ,Modified by l00184147, 2013/4/12*/
   mutex_lock(&md->report_lock);
   md->is_suspended = false;
   mutex_unlock(&md->report_lock);
-  /* END PN:DTS2013041400018 ,Modified by l00184147, 2013/4/12*/
 }
 
 void cyttsp4_setup_early_suspend(struct cyttsp4_mt_data *md)
@@ -545,13 +529,11 @@ static int cyttsp4_mt_resume(struct device *dev)
 }
 #endif
 
-/* BEGIN PN:SPBB-1257 ,Deteled by l00184147, 2013/2/21*/
 //Don't use the pm operation with PM sleep and runtime sleep
 //const struct dev_pm_ops cyttsp4_mt_pm_ops = {
 //  SET_SYSTEM_SLEEP_PM_OPS(cyttsp4_mt_suspend, cyttsp4_mt_resume)
 //  SET_RUNTIME_PM_OPS(cyttsp4_mt_suspend, cyttsp4_mt_resume, NULL)
 //};
-/* END PN:SPBB-1257 ,Deteled by l00184147, 2013/2/21*/
 
 static int cyttsp4_setup_input_device(struct cyttsp4_device *ttsp)
 {
@@ -592,10 +574,8 @@ static int cyttsp4_setup_input_device(struct cyttsp4_device *ttsp)
 		max_y_tmp = CY_VKEYS_QHD_Y;
 	}
   } else {
-      /* BEGIN PN:DTS2013031401505  ,Modified by F00184246, 2013/3/14*/ 
 	max_x_tmp = CY_G610_NOVKEYS_X;
 	max_y_tmp = CY_G610_NOVKEYS_Y;
-     /* END PN:DTS2013031401505  ,Modified by F00184246, 2013/3/14*/ 
   }
 
   /* get maximum values from the sysinfo data */
@@ -786,9 +766,7 @@ static int cyttsp4_mt_probe(struct cyttsp4_device *ttsp)
 	}
 	cyttsp4_init_function_ptrs(md);
 
-	/* BEGIN PN:DTS2013041400018 ,Added by l00184147, 2013/4/12*/
 	mutex_init(&md->report_lock);
-	/* END PN:DTS2013041400018 ,Added by l00184147, 2013/4/12*/
 
 	md->prv_tch_type = CY_OBJ_STANDARD_FINGER;
 	md->ttsp = ttsp;
@@ -856,13 +834,7 @@ struct cyttsp4_driver cyttsp4_mt_driver = {
   .driver = {
 	.name = CYTTSP4_MT_NAME,
 	.bus = &cyttsp4_bus_type,
-	/* BEGIN PN:SPBB-1257 ,Deteled by l00184147, 2013/2/21*/
 	//no longer to use pm operation
 	//.pm = &cyttsp4_mt_pm_ops,
-	/* END PN:SPBB-1257 ,Deteled by l00184147, 2013/2/21*/
   },
 };
-/* END PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
-/* END PN:DTS2013011401860  ,Modified by l00184147, 2013/1/14*/
-/* END PN:DTS2013012601133 ,Modified by l00184147, 2013/1/26*/ 
-/* END PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/

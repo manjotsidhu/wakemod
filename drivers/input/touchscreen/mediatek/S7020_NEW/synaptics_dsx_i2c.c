@@ -3603,11 +3603,11 @@ static void synaptics_put_device_into_easy_wakeup(struct synaptics_rmi4_data *rm
 {
 	int retval;
 	unsigned char device_ctrl;
-	tp_log_info("synaptics_put_device_into_easy_wakeup  rmi4_data->sleep_gesture_flag =%x \n",rmi4_data->sleep_gesture_flag);
+	//tp_log_info("synaptics_put_device_into_easy_wakeup  rmi4_data->sleep_gesture_flag =%s \n",rmi4_data->sleep_gesture_flag);
 	//if the sleep_gesture_flag is ture,it presents that  the tp is at sleep state	
 
 	if (true == rmi4_data->sleep_gesture_flag)	{
-		tp_log_info("synaptics_put_device_into_easy_wakeup  rmi4_data->sleep_gesture_flag =%x \n");
+		//tp_log_info("synaptics_put_device_into_easy_wakeup  rmi4_data->sleep_gesture_flag =%s \n");
 		return;
 	}
 

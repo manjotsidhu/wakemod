@@ -29,6 +29,9 @@
 #include <linux/mrdump.h>
 #include <mach/i2c.h>
 #include <mach/mt_boot_reason.h>
+#ifdef CONFIG_HW_HAVE_TP_THREAD
+#include <linux/hardware_self_adapt.h>
+#endif
 
 #define SERIALNO_LEN 32
 static char serial_number[SERIALNO_LEN];
@@ -1564,8 +1567,23 @@ int HW_TP_Init(void)
 
     printk("-- HW_TP_Init Begin --\n");
 
+    hw_product_type board_id;
+    board_id = get_hardware_product_version();	
+
+    if(((board_id & HW_VER_MAIN_MASK) == HW_H30T_VER)||((board_id & HW_VER_MAIN_MASK) == HW_H30U_VER))
+    {
 		cyttsp4_register_device(&cyttsp4_mt_virtualkey_info);
 		cyttsp4_register_core_device(&cyttsp4_R300_core_info);
+    }
+	else if((board_id & HW_VER_MAIN_MASK) == HW_G6T_VER)
+	{
+		cyttsp4_register_device(&cyttsp4_mt_virtualkey_info);
+		cyttsp4_register_core_device(&cyttsp4_G6_core_info);
+	}	
+    else
+    {
+        printk("cyttsp4_register_device error\n");
+    }
 
     retval = platform_device_register(&mtk_tpd_dev);
     printk("-- HW_TP_Init.End --\n");
@@ -2046,7 +2064,11 @@ retval = platform_device_register(&mtk_m4u_dev);
 #endif
 
 #if defined(CONFIG_MTK_TOUCHPANEL)
+#if defined(CONFIG_HW_HAVE_TP_THREAD)
+    retval = HW_TP_Init();
+#else
     retval = platform_device_register(&mtk_tpd_dev);
+#endif
     if (retval != 0) {
         return retval;
     }

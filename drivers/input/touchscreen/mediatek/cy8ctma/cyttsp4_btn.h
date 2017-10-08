@@ -1,6 +1,4 @@
-/* BEGIN PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/
 //add Touch driver for G610-T11
-/* BEGIN PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
 /*
  * cyttsp4_btn.h
  * Cypress TrueTouch(TM) Standard Product V4 CapSense touch reports module.
@@ -40,5 +38,3 @@ struct cyttsp4_btn_platform_data {
 };
 
 #endif /* _LINUX_CYTTSP4_BTN_H */
-/* END PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
-/* END PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/

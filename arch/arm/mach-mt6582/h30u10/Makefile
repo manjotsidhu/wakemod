@@ -4,8 +4,12 @@ include $(srctree)/drivers/misc/mediatek/Makefile.custom
 # Module project related part
 
 ifeq ($(CONFIG_MTK_SENSOR_SUPPORT),y)
-ifeq ($(CONFIG_MTK_TMD2772_AUTO),y)
-obj-y	+=  alsps/tmd2772_auto/
+ifeq ($(CONFIG_MTK_EPL2182),y)
+obj-y	+=  alsps/EPL2182/
+endif
+
+ifeq ($(CONFIG_MTK_TMD2771_HW_AUTO),y)
+obj-y	+=  alsps/tmd2771_HW_auto/
 endif
 
 ifeq ($(CONFIG_MTK_KXCJK_1013_AUTO),y)
@@ -44,12 +48,10 @@ endif
 obj-y   +=  lcm/
 #obj-y	+=  hdmi/
 obj-y	+=  camera/camera/
-obj-y	+=  imgsensor/t4k04_mipi_raw/
-obj-y	+=  imgsensor/ov12830_mipi_raw/
 obj-y	+=  imgsensor/ov5648_mipi_raw/
-obj-y	+=  imgsensor/ov5645_mipi_yuv/
-obj-y	+=  imgsensor/gc0311_yuv/
-obj-y	+=  imgsensor/hi708_yuv/
+obj-y	+=  imgsensor/s5k4e1ga_mipi_raw/
+obj-y	+=  imgsensor/imx134liteon_mipi_raw/
+obj-y	+=  imgsensor/imx134sunny_mipi_raw/
 obj-y   +=  flashlight/constant_flashlight/
 obj-y	+=  vibrator/
 obj-y	+=  leds/

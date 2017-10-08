@@ -1,9 +1,4 @@
-/* BEGIN PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/
 //add Touch driver for G610-T11
-/* BEGIN PN:DTS2013012601133 ,Modified by l00184147, 2013/1/26*/ 
-/* BEGIN PN:DTS2013011401860  ,Modified by l00184147, 2013/1/14*/
-/* BEGIN PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
-/* BEGIN PN:SPBB-1226  ,Added by f00184246, 2012/1/05*/
 /*
  * cyttsp4_i2c.c
  * Cypress TrueTouch(TM) Standard Product V4 I2C Driver module.
@@ -282,8 +277,3 @@ MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Cypress TrueTouch(R) Standard Product (TTSP) I2C driver");
 MODULE_AUTHOR("Cypress");
 MODULE_DEVICE_TABLE(i2c, cyttsp4_i2c_id);
-/* END PN:SPBB-1226  ,Added by f00184246, 2012/1/05*/
-/* END PN:SPBB-1218 ,Added by l00184147, 2012/12/20*/
-/* END PN:DTS2013011401860  ,Modified by l00184147, 2013/1/14*/
-/* END PN:DTS2013012601133 ,Modified by l00184147, 2013/1/26*/ 
-/* END PN:DTS2013051703879 ,Added by l00184147, 2013/5/17*/
