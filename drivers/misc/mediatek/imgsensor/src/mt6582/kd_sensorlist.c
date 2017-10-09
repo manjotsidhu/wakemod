@@ -27,7 +27,8 @@
 
 static DEFINE_SPINLOCK(kdsensor_drv_lock);
 
-#define SUPPORT_I2C_BUS_NUM1        1
+#define SUPPORT_I2C_BUS_NUM1          0
+//#define SUPPORT_I2C_BUS_NUM2        2
 
 
 #define CAMERA_HW_DRVNAME1  "kd_camera_hw"

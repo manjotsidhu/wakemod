@@ -12,8 +12,16 @@ ifeq ($(CONFIG_MTK_TMD2771_HW_AUTO),y)
 obj-y	+=  alsps/tmd2771_HW_auto/
 endif
 
-ifeq ($(CONFIG_MTK_KXCJK_1013_AUTO),y)
-obj-y   +=  accelerometer/kxcjk_1013_auto/
+ifeq ($(CONFIG_MTK_BMA222E),y)
+obj-y   +=  accelerometer/bma222E/
+endif
+
+ifeq ($(CONFIG_MTK_MMA8452Q_AUTO),y)
+obj-y   +=  accelerometer/mma8452q_auto/
+endif
+
+ifeq ($(CONFIG_MTK_KX023_AUTO),y)
+obj-y   +=  accelerometer/kx023_auto/
 endif
 
 ifeq ($(CONFIG_MTK_LIS3DH_AUTO),y)

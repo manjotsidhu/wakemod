@@ -26,10 +26,14 @@
 #include <linux/earlysuspend.h>
 #include <linux/platform_device.h>
 #include <asm/atomic.h>
+//#include <mach/mt_gpio.h>
 
+//#include <mach/mt_devs.h>
 #include <mach/mt_typedefs.h>
 #include <mach/mt_gpio.h>
 #include <mach/mt_pm_ldo.h>
+
+#define POWER_NONE_MACRO MT65XX_POWER_NONE
 
 #include <cust_acc.h>
 #include <linux/hwmsensor.h>
@@ -37,10 +41,6 @@
 #include <linux/sensors_io.h>
 #include "bma222E.h"
 #include <linux/hwmsen_helper.h>
-
-
-#define POWER_NONE_MACRO MT65XX_POWER_NONE
-
 /*----------------------------------------------------------------------------*/
 #define I2C_DRIVERID_BMA222 222
 /*----------------------------------------------------------------------------*/
@@ -133,15 +133,18 @@ struct bma222_i2c_data {
 /*----------------------------------------------------------------------------*/
 static struct i2c_driver bma222_i2c_driver = {
     .driver = {
+//        .owner          = THIS_MODULE,
         .name           = BMA222_DEV_NAME,
     },
 	.probe      		= bma222_i2c_probe,
 	.remove    			= bma222_i2c_remove,
+	.detect				= bma222_i2c_detect,
 #if !defined(USE_EARLY_SUSPEND)    
     .suspend            = bma222_suspend,
     .resume             = bma222_resume,
 #endif
 	.id_table = bma222_i2c_id,
+//	.address_data = &bma222_addr_data,
 };
 
 /*----------------------------------------------------------------------------*/
@@ -473,9 +476,9 @@ static int BMA222_ReadCalibration(struct i2c_client *client, int dat[BMA222_AXES
     	mul = obj->reso->sensitivity/bma222_offset_resolution.sensitivity;
 	#endif
 
-    dat[obj->cvt.map[BMA222_AXIS_X]] = obj->cvt.sign[BMA222_AXIS_X]*(obj->offset[BMA222_AXIS_X]*mul * GRAVITY_EARTH_1000/obj->reso->sensitivity + obj->cali_sw[BMA222_AXIS_X]);
-    dat[obj->cvt.map[BMA222_AXIS_Y]] = obj->cvt.sign[BMA222_AXIS_Y]*(obj->offset[BMA222_AXIS_Y]*mul * GRAVITY_EARTH_1000/obj->reso->sensitivity + obj->cali_sw[BMA222_AXIS_Y]);
-    dat[obj->cvt.map[BMA222_AXIS_Z]] = obj->cvt.sign[BMA222_AXIS_Z]*(obj->offset[BMA222_AXIS_Z]*mul * GRAVITY_EARTH_1000/obj->reso->sensitivity + obj->cali_sw[BMA222_AXIS_Z]);                        
+    dat[obj->cvt.map[BMA222_AXIS_X]] = obj->cvt.sign[BMA222_AXIS_X]*(obj->offset[BMA222_AXIS_X]*mul + obj->cali_sw[BMA222_AXIS_X]);
+    dat[obj->cvt.map[BMA222_AXIS_Y]] = obj->cvt.sign[BMA222_AXIS_Y]*(obj->offset[BMA222_AXIS_Y]*mul + obj->cali_sw[BMA222_AXIS_Y]);
+    dat[obj->cvt.map[BMA222_AXIS_Z]] = obj->cvt.sign[BMA222_AXIS_Z]*(obj->offset[BMA222_AXIS_Z]*mul + obj->cali_sw[BMA222_AXIS_Z]);                        
                                        
     return err;
 }
@@ -500,9 +503,9 @@ static int BMA222_ReadCalibrationEx(struct i2c_client *client, int act[BMA222_AX
 		mul = obj->reso->sensitivity/bma222_offset_resolution.sensitivity;
 	#endif
 	
-	raw[BMA222_AXIS_X] = obj->offset[BMA222_AXIS_X]*mul * GRAVITY_EARTH_1000/obj->reso->sensitivity + obj->cali_sw[BMA222_AXIS_X];
-	raw[BMA222_AXIS_Y] = obj->offset[BMA222_AXIS_Y]*mul * GRAVITY_EARTH_1000/obj->reso->sensitivity + obj->cali_sw[BMA222_AXIS_Y];
-	raw[BMA222_AXIS_Z] = obj->offset[BMA222_AXIS_Z]*mul * GRAVITY_EARTH_1000/obj->reso->sensitivity + obj->cali_sw[BMA222_AXIS_Z];
+	raw[BMA222_AXIS_X] = obj->offset[BMA222_AXIS_X]*mul + obj->cali_sw[BMA222_AXIS_X];
+	raw[BMA222_AXIS_Y] = obj->offset[BMA222_AXIS_Y]*mul + obj->cali_sw[BMA222_AXIS_Y];
+	raw[BMA222_AXIS_Z] = obj->offset[BMA222_AXIS_Z]*mul + obj->cali_sw[BMA222_AXIS_Z];
 
 	act[obj->cvt.map[BMA222_AXIS_X]] = obj->cvt.sign[BMA222_AXIS_X]*raw[BMA222_AXIS_X];
 	act[obj->cvt.map[BMA222_AXIS_Y]] = obj->cvt.sign[BMA222_AXIS_Y]*raw[BMA222_AXIS_Y];
@@ -545,9 +548,9 @@ static int BMA222_WriteCalibration(struct i2c_client *client, int dat[BMA222_AXE
 	obj->cali_sw[BMA222_AXIS_Z] = obj->cvt.sign[BMA222_AXIS_Z]*(cali[obj->cvt.map[BMA222_AXIS_Z]]);	
 #else
 	int divisor = obj->reso->sensitivity/lsb;//modified
-	obj->offset[BMA222_AXIS_X] = (s8)(obj->cvt.sign[BMA222_AXIS_X]*(cali[obj->cvt.map[BMA222_AXIS_X]]) * obj->reso->sensitivity / GRAVITY_EARTH_1000/(divisor));
-	obj->offset[BMA222_AXIS_Y] = (s8)(obj->cvt.sign[BMA222_AXIS_Y]*(cali[obj->cvt.map[BMA222_AXIS_Y]]) * obj->reso->sensitivity / GRAVITY_EARTH_1000/(divisor));
-	obj->offset[BMA222_AXIS_Z] = (s8)(obj->cvt.sign[BMA222_AXIS_Z]*(cali[obj->cvt.map[BMA222_AXIS_Z]]) * obj->reso->sensitivity / GRAVITY_EARTH_1000/(divisor));
+	obj->offset[BMA222_AXIS_X] = (s8)(obj->cvt.sign[BMA222_AXIS_X]*(cali[obj->cvt.map[BMA222_AXIS_X]])/(divisor));
+	obj->offset[BMA222_AXIS_Y] = (s8)(obj->cvt.sign[BMA222_AXIS_Y]*(cali[obj->cvt.map[BMA222_AXIS_Y]])/(divisor));
+	obj->offset[BMA222_AXIS_Z] = (s8)(obj->cvt.sign[BMA222_AXIS_Z]*(cali[obj->cvt.map[BMA222_AXIS_Z]])/(divisor));
 
 	/*convert software calibration using standard calibration*/
 	obj->cali_sw[BMA222_AXIS_X] = obj->cvt.sign[BMA222_AXIS_X]*(cali[obj->cvt.map[BMA222_AXIS_X]])%(divisor);
@@ -856,11 +859,6 @@ static int BMA222_ReadSensorData(struct i2c_client *client, char *buf, int bufsi
 	}
 	else
 	{
-	#if 1
-		obj->data[BMA222_AXIS_X] = obj->data[BMA222_AXIS_X] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;
-		obj->data[BMA222_AXIS_Y] = obj->data[BMA222_AXIS_Y] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;
-		obj->data[BMA222_AXIS_Z] = obj->data[BMA222_AXIS_Z] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;		
-	#endif	
 		//GSE_LOG("raw data x=%d, y=%d, z=%d \n",obj->data[BMA222_AXIS_X],obj->data[BMA222_AXIS_Y],obj->data[BMA222_AXIS_Z]);
 		obj->data[BMA222_AXIS_X] += obj->cali_sw[BMA222_AXIS_X];
 		obj->data[BMA222_AXIS_Y] += obj->cali_sw[BMA222_AXIS_Y];
@@ -879,11 +877,10 @@ static int BMA222_ReadSensorData(struct i2c_client *client, char *buf, int bufsi
 
 		//Out put the mg
 		//printk("mg acc=%d, GRAVITY=%d, sensityvity=%d \n",acc[BMA150_AXIS_X],GRAVITY_EARTH_1000,obj->reso->sensitivity);
-#if 0
 		acc[BMA222_AXIS_X] = acc[BMA222_AXIS_X] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;
 		acc[BMA222_AXIS_Y] = acc[BMA222_AXIS_Y] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;
 		acc[BMA222_AXIS_Z] = acc[BMA222_AXIS_Z] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;		
-	#endif	
+		
 	
 
 		sprintf(buf, "%04x %04x %04x", acc[BMA222_AXIS_X], acc[BMA222_AXIS_Y], acc[BMA222_AXIS_Z]);
@@ -1150,7 +1147,7 @@ static ssize_t store_trace_value(struct device_driver *ddri, const char *buf, si
 	}	
 	else
 	{
-		GSE_ERR("invalid content: '%s', length = %d\n", buf, (int)count);
+		GSE_ERR("invalid content: '%s', length = %d\n", buf, count);
 	}
 	
 	return count;    
@@ -1507,17 +1504,9 @@ static long bma222_unlocked_ioctl(struct file *file, unsigned int cmd,
 			}
 			else
 			{
-			#if 0
 				cali[BMA222_AXIS_X] = sensor_data.x * obj->reso->sensitivity / GRAVITY_EARTH_1000;
 				cali[BMA222_AXIS_Y] = sensor_data.y * obj->reso->sensitivity / GRAVITY_EARTH_1000;
 				cali[BMA222_AXIS_Z] = sensor_data.z * obj->reso->sensitivity / GRAVITY_EARTH_1000;			  
-			#else
-			cali[BMA222_AXIS_X] = sensor_data.x;
-			cali[BMA222_AXIS_Y] = sensor_data.y;
-			cali[BMA222_AXIS_Z] = sensor_data.z;			  
-					
-
-			#endif
 				err = BMA222_WriteCalibration(client, cali);			 
 			}
 			break;
@@ -1537,17 +1526,10 @@ static long bma222_unlocked_ioctl(struct file *file, unsigned int cmd,
 			{
 				break;
 			}
-			#if 0
+			
 			sensor_data.x = cali[BMA222_AXIS_X] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;
 			sensor_data.y = cali[BMA222_AXIS_Y] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;
 			sensor_data.z = cali[BMA222_AXIS_Z] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;
-			#else
-			sensor_data.x = cali[BMA222_AXIS_X];
-			sensor_data.y = cali[BMA222_AXIS_Y];
-			sensor_data.z = cali[BMA222_AXIS_Z];
-						
-
-			#endif
 			if(copy_to_user(data, &sensor_data, sizeof(sensor_data)))
 			{
 				err = -EFAULT;
@@ -1885,28 +1867,6 @@ static int bma222_remove(struct platform_device *pdev)
     return 0;
 }
 /*----------------------------------------------------------------------------*/
-#if 1
-#ifdef CONFIG_OF
-static const struct of_device_id gsensor_of_match[] = {
-	{ .compatible = "mediatek,gsensor", },
-	{},
-};
-#endif
-
-static struct platform_driver bma222_gsensor_driver = {
-	.probe      = bma222_probe,
-	.remove     = bma222_remove,    
-	.driver     = 
-	{
-		.name  = "gsensor",
-		.owner  = THIS_MODULE,
-        #ifdef CONFIG_OF
-		.of_match_table = gsensor_of_match,
-		#endif
-	}
-};
-#else
-
 static struct platform_driver bma222_gsensor_driver = {
 	.probe      = bma222_probe,
 	.remove     = bma222_remove,    
@@ -1915,7 +1875,7 @@ static struct platform_driver bma222_gsensor_driver = {
 		.owner = THIS_MODULE,
 	}
 };
-#endif
+
 /*----------------------------------------------------------------------------*/
 static int __init bma222_init(void)
 {

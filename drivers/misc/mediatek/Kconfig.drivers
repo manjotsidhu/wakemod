@@ -1168,6 +1168,14 @@ config MTK_YAS532
         bool "YAS532 for Mediatek package"
         default n
 
+config MTK_MMA8452Q_AUTO
+	bool "MMA8452Q_AUTO for MediaTek package"
+	default n
+
+config MTK_KX023_AUTO
+	bool "KX023_AUTO for MediaTek package"
+	default n
+
 # Barometer sensor
 config MTK_BMP180_NEW
 	bool "BMP180 for MediaTek package"

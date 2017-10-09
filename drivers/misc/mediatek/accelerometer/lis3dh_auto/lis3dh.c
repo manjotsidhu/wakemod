@@ -28,7 +28,6 @@
 #include <asm/atomic.h>
 
 
-#include "accel.h"
 #include <cust_acc.h>
 #include <linux/hwmsensor.h>
 #include <linux/hwmsen_dev.h>
@@ -39,9 +38,33 @@
 #include <mach/mt_typedefs.h>
 #include <mach/mt_gpio.h>
 #include <mach/mt_pm_ldo.h>
-
+#include <linux/fs.h>
+#include <linux/namei.h>
+#include <linux/vmalloc.h>
 #define POWER_NONE_MACRO MT65XX_POWER_NONE
+ #ifdef MTK_GSENSOR_CALIBRATE
+#define FILE_PATH_ACCL_CALIBRATE "/data/accl_calibrate"
+#define  RIGHT_CALIBRATION  1    
+#define  WRONG_CALIBRATION 0
+#define  NO_CALIBRATION  2
 
+#define  OFFSET_BIG_ERROR  100  //mean for 200mg
+#define  OFFSET_SMALL_ERROR  -100
+
+#define  SCALE 2
+
+#define  Z_SCALE_BIG     255
+#define  Z_SCALE_SMALL   168
+#define  Z_SCALE          203
+
+static int calibration_value = 0;   // FLAG OF calibrate
+static int return_calibration = 2;
+static int first_start_flag = 1;    // flag of read offset
+static int calibrate_count = 0;
+static int accel[3] = {0, 0, 0};
+static int accel_offset[3] = {0, 0, 0};
+static int temp[3]={0,0,0};
+#endif
 /*----------------------------------------------------------------------------*/
 //#define I2C_DRIVERID_LIS3DH 345
 /*----------------------------------------------------------------------------*/
@@ -59,7 +82,7 @@
 static const struct i2c_device_id lis3dh_i2c_id[] = {{LIS3DH_DEV_NAME,0},{}};
 /*the adapter id will be available in customization*/
 static struct i2c_board_info __initdata i2c_LIS3DH={ I2C_BOARD_INFO("LIS3DH", (0x30>>1))};
-
+extern int holster_status ;
 //static unsigned short lis3dh_force[] = {0x00, LIS3DH_I2C_SLAVE_ADDR, I2C_CLIENT_END, I2C_CLIENT_END};
 //static const unsigned short *const lis3dh_forces[] = { lis3dh_force, NULL };
 //static struct i2c_client_address_data lis3dh_addr_data = { .forces = lis3dh_forces,};
@@ -185,9 +208,32 @@ static struct data_resolution lis3dh_data_resolution[] = {
 static struct data_resolution lis3dh_offset_resolution = {{15, 6}, 64};
 
 /*--------------------read function----------------------------------*/
+int lis_i2c_read_byte(struct i2c_client *client, u8 addr, u8 *data)
+{
+	u8 buf;
+	int ret = 0;
+
+	client->addr = client->addr& I2C_MASK_FLAG | I2C_WR_FLAG |I2C_RS_FLAG;
+	buf = addr;
+	ret = i2c_master_send(client, (const char*)&buf, 1<<8 | 1);
+	
+	if (ret < 0) 
+	{
+		HWM_ERR("send command error!!\n");
+		return -EFAULT;
+	}
+
+	*data = buf;
+	client->addr = client->addr& I2C_MASK_FLAG;
+	return 0;
+}
 static int lis_i2c_read_block(struct i2c_client *client, u8 addr, u8 *data, u8 len)
 {
-    u8 beg = addr;
+	if(1==len)
+	{
+		return lis_i2c_read_byte(client, addr, data);
+	}
+	u8 beg = addr;
 	int err;
 	struct i2c_msg msgs[2]={{0},{0}};
 	
@@ -741,6 +787,53 @@ static int LIS3DH_SetIntEnable(struct i2c_client *client, u8 intenable)
 	return LIS3DH_SUCCESS;    
 }
 /*----------------------------------------------------------------------------*/
+/* disable pullup of SDO/SDA*/
+static int LIS3DH_DisablePullup(struct i2c_client *client)
+{
+	u8 databuf[10];
+	u8 addr = 0x1E;
+	int res = 0;
+	if(lis_i2c_read_byte(client, addr, &databuf[0]))
+	{
+		GSE_ERR("read reg_ctl_reg1 register err!\n");
+		return -1;
+	}
+	databuf[0] = databuf[0] | 0x80 ;
+	printk("LIS3DH_DisablePullup,databuf[0]=%0x\n",databuf[0]);
+	if( hwmsen_write_byte(client, addr, databuf[0]))
+	{
+		GSE_ERR("write 0x1E fail at first time!\n");
+		if( hwmsen_write_byte(client, addr, databuf[0]))
+		{
+			GSE_ERR("write 0x1E fail at second time!\n");
+			return -1;
+		}
+		else
+		{
+			GSE_LOG("write 0x1E success at second time!\n");
+		}
+	}
+	else
+	{
+			GSE_LOG("write 0x1E success at first time!\n");
+	}
+	if(lis_i2c_read_byte(client, addr, &databuf[1]))
+	{
+		GSE_ERR("read reg_ctl_reg1 register err!\n");
+		return -1;
+	}
+	printk("LIS3DH_DisablePullup,databuf[1]=%0x\n",databuf[1]);
+	if(0x80 == (databuf[1] & 0x80))
+	{
+		GSE_LOG("set and read success!\n");
+	}
+	else
+	{
+		GSE_ERR("set failed!\n");
+		return -1;
+	}
+	return 0;
+}
 static int LIS3DH_Init(struct i2c_client *client, int reset_cali)
 {
 	struct lis3dh_i2c_data *obj = i2c_get_clientdata(client);
@@ -828,6 +921,192 @@ static int LIS3DH_ReadChipInfo(struct i2c_client *client, char *buf, int bufsize
 	sprintf(buf, "LIS3DH Chip");
 	return 0;
 }
+ #ifdef MTK_GSENSOR_CALIBRATE
+/******************************************************************************
+  Function:       read_gsensor_offset_from_file
+  Description:    read gsensor offset from file
+  Input:          NA
+	Output:         NA
+  Return:         0:Success   -1:Fail
+  Others:        NA
+******************************************************************************/
+//read offset value from file
+static int read_gsensor_offset_from_file()
+{
+
+	mm_segment_t oldfs;
+	struct file *filp;
+	char *buf;
+	int length =0;
+	struct inode *inode = NULL;
+	//set Kernel Env
+	oldfs = get_fs(); 
+	set_fs(KERNEL_DS);
+
+	//open file 
+	filp=filp_open(FILE_PATH_ACCL_CALIBRATE, O_RDONLY,0); 
+	if (IS_ERR(filp) || !filp->f_op) 
+	{
+		GSE_LOG("Calibration File filp_open return NULL\n");
+		accel_offset[0]=0;
+		accel_offset[1]=0;
+		accel_offset[2]=0;
+		set_fs(oldfs);
+		return -1; 
+	}
+
+	//read buf lenth
+	inode = filp->f_path.dentry->d_inode;
+    	if (!inode) 
+    	{
+        	GSE_ERR("Get inode from filp failed\n");
+        	filp_close(filp, NULL);
+        	set_fs(oldfs);
+	  	accel_offset[0]=0;
+	  	accel_offset[1]=0;
+	 	accel_offset[2]=0;
+        	return -1;
+    	}
+	length = i_size_read(inode->i_mapping->host);
+	GSE_ERR("Get length=%d\n",length);
+	buf=vmalloc(length+1);
+      
+	if(NULL==buf)
+	{
+		GSE_ERR("vmalloc,fail\n");
+		filp_close(filp, NULL);
+        	set_fs(oldfs);
+	  	accel_offset[0]=0;
+	  	accel_offset[1]=0;
+	 	accel_offset[2]=0;
+        	return -1;
+	}
+       memset(buf,0,length+1);
+	//read file data to buf
+	if (filp->f_op->read(filp, buf, length, &filp->f_pos) != length)
+	{
+		GSE_ERR("read fail\n");
+		filp_close(filp, NULL);
+        	set_fs(oldfs);
+		vfree(buf);
+	  	accel_offset[0]=0;
+	  	accel_offset[1]=0;
+	 	accel_offset[2]=0;
+        	return -1;
+	}
+	sscanf(buf, "%d %d %d",&accel_offset[0], &accel_offset[1], &accel_offset[2]);
+	GSE_ERR("accel_offset[0]=%d,accel_offset[1]=%d,accel_offset[2]=%d\n",accel_offset[0],accel_offset[1],accel_offset[2]);
+
+	if(accel_offset[0]>OFFSET_BIG_ERROR||accel_offset[0]<OFFSET_SMALL_ERROR
+					||accel_offset[1]>OFFSET_BIG_ERROR||accel_offset[1]<OFFSET_SMALL_ERROR
+						||accel_offset[2]>Z_SCALE_BIG||accel_offset[2]<Z_SCALE_SMALL)
+	{
+		GSE_ERR("read data error\n");
+		filp_close(filp, NULL);
+        	set_fs(oldfs);
+		vfree(buf);
+		accel_offset[0]=0;
+	  	accel_offset[1]=0;
+	 	accel_offset[2]=0;
+		return -1;
+	}
+	filp_close(filp, NULL);
+       set_fs(oldfs);
+	vfree(buf);
+	
+	
+	first_start_flag = 0;
+	return 0;
+}
+
+/******************************************************************************
+  Function:       write_gsensor_offset_to_file
+  Description:    write gsensor offset to file
+  Input:          NA
+  Output:         NA
+  Return:         0:Success   -1:Fail
+  Others:        NA
+******************************************************************************/
+//write offset value to file
+static int write_gsensor_offset_to_file()
+{
+	mm_segment_t oldfs;
+	struct file *fp;
+	char buf[20];
+	int lenth=0;
+	//set Kernel Env
+	oldfs = get_fs(); 
+	set_fs(KERNEL_DS);
+
+	//open file or create file
+	fp=filp_open(FILE_PATH_ACCL_CALIBRATE, O_RDWR|O_CREAT, 0664);
+	if (IS_ERR(fp) || !fp->f_op) 
+	{
+		set_fs(oldfs); 
+		GSE_ERR("Calibration File filp_open return NULL\n");
+		return -1; 
+	}
+	lenth=sprintf(buf,"%4d %4d %4d",temp[0],temp[1],temp[2]);
+	
+	GSE_ERR("lenth=%d,temp[0]=%d,temp[1]=%d,temp[2]=%d\n",lenth,temp[0],temp[1],temp[2]);
+	//save data to file
+	if (fp->f_op && fp->f_op->write)
+	{
+		fp->f_op->write(fp,buf,lenth,&fp->f_pos);
+	}
+	else
+	{
+		
+		filp_close(fp,NULL);
+		set_fs(oldfs); 
+		GSE_ERR("Calibration File filp_write NULL\n");
+		return -1;
+	}
+	
+	//restore kernel env
+	
+	filp_close(fp,NULL);
+	set_fs(oldfs); 
+	return 0;
+	
+}
+static ssize_t show_accl_calibrate(struct device_driver *ddri, char *buf)
+{
+
+	int val = return_calibration;
+	GSE_ERR("Gsensor calibrate show,return_calibration=%d\n",return_calibration);
+	return snprintf(buf, PAGE_SIZE, "%d\n", val);
+}
+
+static ssize_t store_accl_calibrate(struct device_driver *ddri, const char *buf, size_t count)
+{
+
+	unsigned long val;
+	int ret =0;
+	struct path path;
+       struct file* fp;
+
+	if (strict_strtoul(buf, 10, &val))
+		return -EINVAL;
+
+	if (val)
+	{
+	    GSE_ERR("Gsensor calibrate start!!!!!!!\n");
+	    calibrate_count = 0;
+	    accel[0] = 0;
+	    accel[1] = 0;
+	    accel[2] = 0;
+	    return_calibration=WRONG_CALIBRATION;
+	    calibration_value = 1;
+	}
+	else
+	{
+		calibration_value = 0;
+	}
+
+	return count;
+}
+#endif
 /*----------------------------------------------------------------------------*/
 static int LIS3DH_ReadSensorData(struct i2c_client *client, char *buf, int bufsize)
 {
@@ -835,6 +1114,10 @@ static int LIS3DH_ReadSensorData(struct i2c_client *client, char *buf, int bufsi
 	u8 databuf[20];
 	int acc[LIS3DH_AXES_NUM];
 	int res = 0;
+	#ifdef MTK_GSENSOR_CALIBRATE
+	int data[LIS3DH_AXES_NUM];
+	int err=0;
+	#endif
 	memset(databuf, 0, sizeof(u8)*10);
 
 	if(NULL == buf)
@@ -885,9 +1168,85 @@ static int LIS3DH_ReadSensorData(struct i2c_client *client, char *buf, int bufsi
 		acc[LIS3DH_AXIS_X] = acc[LIS3DH_AXIS_X] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;
 		acc[LIS3DH_AXIS_Y] = acc[LIS3DH_AXIS_Y] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;
 		acc[LIS3DH_AXIS_Z] = acc[LIS3DH_AXIS_Z] * GRAVITY_EARTH_1000 / obj->reso->sensitivity;		
+		#ifdef MTK_GSENSOR_CALIBRATE
+		/*convert mg*/
+		data[LIS3DH_AXIS_X]=(acc[LIS3DH_AXIS_X]*1024)/GRAVITY_EARTH_1000;
+		data[LIS3DH_AXIS_Y]=(acc[LIS3DH_AXIS_Y]*1024)/GRAVITY_EARTH_1000;
+		data[LIS3DH_AXIS_Z]=(acc[LIS3DH_AXIS_Z]*1024)/GRAVITY_EARTH_1000;
 		
+		/* calibrate start*/
+		if (1 == calibration_value)
+		{
+        	
+	    //compute accel
+			GSE_ERR("enter calibrate start,calibrate_count=%d,accel[0]=%d,accel[1]=%d,accel[2]=%d\n",calibrate_count,accel[0],accel[1],accel[2]);
+			calibrate_count ++;
+	    		if (calibrate_count <= 10)
+	     		{
+	        		accel[0] += data[LIS3DH_AXIS_X];
+		  		accel[1] += data[LIS3DH_AXIS_Y];
+		    		accel[2] += data[LIS3DH_AXIS_Z];
+			}
+            		else
+            		{
+				temp[0] = (accel[0] /10)/SCALE;
+				temp[1] = (accel[1] /10)/SCALE;
+				temp[2] = 1024*Z_SCALE/ (accel[2] /10);
 
+				/*****judge whether offset<200mg********/
+				if(temp[0]>OFFSET_BIG_ERROR||temp[0]<OFFSET_SMALL_ERROR
+					||temp[1]>OFFSET_BIG_ERROR||temp[1]<OFFSET_SMALL_ERROR
+						||temp[2]>Z_SCALE_BIG||temp[2]<Z_SCALE_SMALL)
+				{
+					return_calibration = WRONG_CALIBRATION;
+					GSE_ERR("WRONG_CALIBRATION_VALUE   |temp_offset| bigger than 200mg/2; temp_offset= %d %d %d \n",temp[0],temp[1],temp[2]);
+				}
+				else
+				{
+					GSE_ERR("RIGHT_CALIBRATION_VALUE   |temp_offset| smaller than 200mg/2;temp_offset = %d %d %d \n",temp[0],temp[1],temp[2]);
+					err=write_gsensor_offset_to_file();
+					if(err<0)
+					{
+						return_calibration = WRONG_CALIBRATION;
+						GSE_ERR("WRONG_CALIBRATION because of write file error \n");
+					}
+					else
+					{
+						msleep(10);
+						err=read_gsensor_offset_from_file();
+						if(err<0)
+						{
+							return_calibration = WRONG_CALIBRATION;
+							GSE_ERR("WRONG_CALIBRATION because of read file error \n");
+						}
+						else
+						{
+							if(accel_offset[0] == temp[0]&& accel_offset[1] == temp[1]&&accel_offset[2] == temp[2])
+								return_calibration = RIGHT_CALIBRATION;
+							else
+								return_calibration = WRONG_CALIBRATION;
+							GSE_ERR("the CALIBRATION status is %d; gsensor_offset=[%d,%d,%d]\n",return_calibration,accel_offset[0],accel_offset[1],accel_offset[2]);
+						}
+					}
+				}
+				calibrate_count = 100;//for only one calibrate
+				calibration_value = 0;
+
+	    		}
+		}
+		data[LIS3DH_AXIS_X]=((data[LIS3DH_AXIS_X]-accel_offset[0]* SCALE)*GRAVITY_EARTH_1000)/1024;
+		data[LIS3DH_AXIS_Y]=((data[LIS3DH_AXIS_Y]-accel_offset[1]* SCALE)*GRAVITY_EARTH_1000)/1024;
+		if(accel_offset[2]>0)
+		{
+			data[LIS3DH_AXIS_Z]=data[LIS3DH_AXIS_Z]*accel_offset[2]/Z_SCALE;
+		}
+		data[LIS3DH_AXIS_Z]=(data[LIS3DH_AXIS_Z]*GRAVITY_EARTH_1000)/1024;
+		
+		sprintf(buf, "%04x %04x %04x", data[LIS3DH_AXIS_X], data[LIS3DH_AXIS_Y], data[LIS3DH_AXIS_Z]);
+		//GSE_LOG("accel_offset[0]=%d,accel_offset[1]=%d,accel_offset[2]=%d\n", accel_offset[0],accel_offset[1],accel_offset[2]);
+		#else
 		sprintf(buf, "%04x %04x %04x", acc[LIS3DH_AXIS_X], acc[LIS3DH_AXIS_Y], acc[LIS3DH_AXIS_Z]);
+		#endif
 		if(atomic_read(&obj->trace) & ADX_TRC_IOCTL)//atomic_read(&obj->trace) & ADX_TRC_IOCTL
 		{
 			GSE_LOG("gsensor data: %s!\n", buf);
@@ -1164,6 +1523,9 @@ static DRIVER_ATTR(power,                S_IRUGO, show_power_status,          NU
 static DRIVER_ATTR(firlen,     S_IWUSR | S_IRUGO, show_firlen_value,        store_firlen_value);
 static DRIVER_ATTR(trace,      S_IWUSR | S_IRUGO, show_trace_value,         store_trace_value);
 static DRIVER_ATTR(status,               S_IRUGO, show_status_value,        NULL);
+#ifdef MTK_GSENSOR_CALIBRATE
+static DRIVER_ATTR(accl_calibrate,       S_IWUSR | S_IRUGO, show_accl_calibrate,          store_accl_calibrate);
+#endif
 /*----------------------------------------------------------------------------*/
 static struct driver_attribute *lis3dh_attr_list[] = {
 	&driver_attr_chipinfo,     /*chip information*/
@@ -1172,7 +1534,10 @@ static struct driver_attribute *lis3dh_attr_list[] = {
 	&driver_attr_power,         /*show power reg*/
 	&driver_attr_firlen,       /*filter length: 0: disable, others: enable*/
 	&driver_attr_trace,        /*trace log*/
-	&driver_attr_status,        
+	&driver_attr_status,
+	#ifdef MTK_GSENSOR_CALIBRATE
+	&driver_attr_accl_calibrate, /*huawei calibrate*/
+	#endif
 };
 /*----------------------------------------------------------------------------*/
 static int lis3dh_create_attr(struct device_driver *driver) 
@@ -1284,6 +1649,16 @@ int lis3dh_operate(void* self, uint32_t command, void* buff_in, int size_in,
 				value = *(int *)buff_in;
 				mutex_lock(&lis3dh_op_mutex);
 				GSE_LOG("Gsensor device enable function enable = %d, sensor_power = %d!\n",value,sensor_power);
+				#ifdef MTK_GSENSOR_CALIBRATE
+				if(1==value)
+				{
+					if(1 == first_start_flag)
+					{
+						GSE_ERR("gsensor enable read accl_offset!!!!!\n");
+						read_gsensor_offset_from_file();
+					}
+				}
+				#endif
 				if(((value == 0) && (sensor_power == false)) ||((value == 1) && (sensor_power == true)))
 				{
 					enable_status = sensor_power;
@@ -1404,6 +1779,13 @@ static long lis3dh_unlocked_ioctl(struct file *file, unsigned int cmd,
 				err = -EINVAL;
 				break;	  
 			}
+			#ifdef MTK_GSENSOR_CALIBRATE
+			if(1 == first_start_flag)
+			{
+				printk("akm gsensor enable read accl_offset!!!!!\n");
+				read_gsensor_offset_from_file();
+			}
+			#endif
 			LIS3DH_SetPowerMode(client,true);
 			LIS3DH_ReadSensorData(client, strbuf, LIS3DH_BUFSIZE);
 			if(copy_to_user(data, strbuf, strlen(strbuf)+1))
@@ -1604,8 +1986,7 @@ static void lis3dh_early_suspend(struct early_suspend *h)
 	u8 databuf[2]; 
 	int err = 0;
 	u8 addr = LIS3DH_REG_CTL_REG1;
-
-	if(obj == NULL)
+	if((obj == NULL) ||(holster_status==1))
 	{
 		GSE_ERR("null pointer!!\n");
 		return;
@@ -1709,7 +2090,12 @@ static int lis3dh_i2c_probe(struct i2c_client *client, const struct i2c_device_i
 	
 #endif
 
-	lis3dh_i2c_client = new_client;	
+	lis3dh_i2c_client = new_client;
+	/* disable pullup of SDO/SDA to decrease consumption */
+	if(err = LIS3DH_DisablePullup(new_client) )
+	{
+		goto exit_init_failed;
+	}
 
 	for(retry = 0; retry < 3; retry++){
 	if((err = LIS3DH_Init(new_client, 1)))
@@ -1830,8 +2216,8 @@ static int __init lis3dh_init(void)
 	//GSE_FUN();
 	struct acc_hw *hw = lis3dh_get_cust_acc_hw();
 	GSE_LOG("%s: i2c_number=%d\n", __func__,hw->i2c_num); 
-	i2c_register_board_info(0, &i2c_LIS3DH, 1);
-	acc_driver_add(&lis3dh_init_info);
+	i2c_register_board_info(hw->i2c_num, &i2c_LIS3DH, 1);
+	//hwmsen_gsensor_add(&lis3dh_init_info);
 	return 0;    
 }
 /*----------------------------------------------------------------------------*/
