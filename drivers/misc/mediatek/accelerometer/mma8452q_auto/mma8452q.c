@@ -2142,7 +2142,7 @@ static int __init mma8452q_init(void)
 	struct acc_hw *hw = mma8452q_get_cust_acc_hw();
 	GSE_LOG("%s: i2c_number=%d\n", __func__,hw->i2c_num); 
 	i2c_register_board_info(hw->i2c_num, &i2c_MMA8452Q, 1);
-	//hwmsen_gsensor_add(&mma8452q_init_info);
+	hwmsen_gsensor_add(&mma8452q_init_info);
 	return 0;    
 }
 /*----------------------------------------------------------------------------*/
