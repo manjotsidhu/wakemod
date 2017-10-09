@@ -30,3 +30,7 @@ endif
 ifeq ($(CONFIG_MTK_MMC3516X_AUTO),y)
 obj-y	+=  mmc3516x_auto/
 endif
+
+ifeq ($(CONFIG_MTK_AKM09911),y)
+obj-y	+=  akm09911/
+endif

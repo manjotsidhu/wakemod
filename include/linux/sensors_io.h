@@ -96,6 +96,7 @@ typedef struct {
 #define ECS_IOCTL_GET_PROJECT_NAME      _IOR(MSENSOR, 0x15, char[64])
 #define ECS_IOCTL_GET_MATRIX            _IOR(MSENSOR, 0x16, short [4][3][3])
 #define	ECS_IOCTL_GET_LAYOUT			_IOR(MSENSOR, 0x17, int[3])
+#define ECS_IOCTL_APP_GET_CAL  		_IOR(MSENSOR, 0x26, short)
 
 #define ECS_IOCTL_GET_OUTBIT		_IOR(MSENSOR, 0x23, char)
 #define ECS_IOCTL_GET_ACCEL		_IOR(MSENSOR, 0x24, short[3])
@@ -149,6 +150,7 @@ typedef struct {
 #define AAL_SET_ALS_MODE				_IOW(ALSPS, 0x14,int)
 #define AAL_GET_ALS_MODE				_IOR(ALSPS, 0x15,int)
 #define AAL_GET_ALS_DATA				_IOR(ALSPS, 0x16,int)
+
 
 
 #define GYROSCOPE							0X86

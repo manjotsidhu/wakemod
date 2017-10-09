@@ -35,7 +35,7 @@
 #include <mach/mt_typedefs.h>
 #include <mach/mt_gpio.h>
 #include <mach/mt_pm_ldo.h>
-
+#include <linux/hardware_self_adapt.h>
 
 #define POWER_NONE_MACRO MT65XX_POWER_NONE
 
@@ -46,6 +46,7 @@
 /*----------------------------------------------------------------------------*/
 #define DEBUG 0
 #define AKM09911_DEV_NAME         "akm09911"
+#define AKM8963_DEV_NAME         "akm8963"
 #define DRIVER_VERSION          "1.0.1"
 /*----------------------------------------------------------------------------*/
 #define AKM09911_DEBUG		1
@@ -55,6 +56,8 @@
 #define MAX_FAILURE_COUNT	3
 #define AKM09911_RETRY_COUNT	10
 #define AKM09911_DEFAULT_DELAY	100
+#define AKM_Pseudogyro		   // enable this if you need use 6D gyro
+#define AKM_Device_AK8963		//if use AK09911 code to compatible AK8963C, need define this
 
 //#define AKM_Pseudogyro		   // enable this if you need use 6D gyro
 //#define AKM_Device_AK8963		//if use AK09911 code to compatible AK8963C, need define this 
@@ -71,6 +74,8 @@
 #else
 #define AKMFUNC(func)
 #endif
+
+#define AKMERR(format, ...)	printk(KERN_ERR "AKM09911 " format "\n", ## __VA_ARGS__)
 
 static struct i2c_client *this_client = NULL;
 
@@ -94,10 +99,16 @@ static int ecompass_status = 0;
 
 static int mEnabled=0;
 
+static short calibration_value=0;
+
 /*----------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 static const struct i2c_device_id akm09911_i2c_id[] = {{AKM09911_DEV_NAME,0},{}};
+#ifdef AKM_Device_AK8963
+static struct i2c_board_info __initdata i2c_akm09911={ I2C_BOARD_INFO("akm09911", (0x0E))};
+#else
 static struct i2c_board_info __initdata i2c_akm09911={ I2C_BOARD_INFO("akm09911", (AKM09911_I2C_ADDRESS>>1))};
+#endif
 /*the adapter id will be available in customization*/
 //static unsigned short akm09911_force[] = {0x00, AKM09911_I2C_ADDRESS, I2C_CLIENT_END, I2C_CLIENT_END};
 //static const unsigned short *const akm09911_forces[] = { akm09911_force, NULL };
@@ -149,34 +160,12 @@ static struct i2c_driver akm09911_i2c_driver = {
 };
 
 /*----------------------------------------------------------------------------*/
-#if 0
 static struct platform_driver akm_sensor_driver = {
 	.probe      = akm_probe,
 	.remove     = akm_remove,    
 	.driver     = {
 		.name  = "msensor",
 		.owner = THIS_MODULE,
-	}
-};
-#endif
-
-#ifdef CONFIG_OF
-static const struct of_device_id akm09911_of_match[] = {
-	{ .compatible = "mediatek,msensor", },
-	{},
-};
-#endif
-
-static struct platform_driver akm_sensor_driver =
-{
-	.probe      = akm_probe,
-	.remove     = akm_remove,    
-	.driver     = 
-	{
-		.name = "msensor",
-        #ifdef CONFIG_OF
-		.of_match_table = akm09911_of_match,
-		#endif
 	}
 };
 
@@ -700,6 +689,9 @@ TEST_DATA(const char testno[],
 		} else {
 			//Fail
 			pf = -1;
+			AKMERR(" %7s  %-10s      %c    %9d    [%9d    %9d]\n",
+				 testno, testname, ((pf == 1) ? ('.') : ('F')), testdata,
+				 lolimit, hilimit);
 		}
 
 		//display result
@@ -1202,7 +1194,7 @@ static ssize_t show_chipinfo_value(struct device_driver *ddri, char *buf)
 {
 	char strbuf[AKM09911_BUFSIZE];
 	akm09911_ReadChipInfo(strbuf, AKM09911_BUFSIZE);
-	return sprintf(buf, "%s\n", strbuf);        
+	return sprintf(buf, "%s,%d\n", strbuf,calibration_value);  
 }
 /*----------------------------------------------------------------------------*/
 static ssize_t show_sensordata_value(struct device_driver *ddri, char *buf)
@@ -1453,7 +1445,7 @@ static long akm09911_unlocked_ioctl(struct file *file, unsigned int cmd,unsigned
 	   After that, the value is not changed */
 	unsigned char sense_info[AKM_SENSOR_INFO_SIZE];
 	unsigned char sense_conf[AKM_SENSOR_CONF_SIZE]; 
-
+	short flag = 0;
   //	printk(KERN_ERR"akm09911 cmd:0x%x\n", cmd);	
 	switch (cmd)
 	{
@@ -1764,6 +1756,19 @@ static long akm09911_unlocked_ioctl(struct file *file, unsigned int cmd,unsigned
 			} 
 			
 			break;
+        
+		case ECS_IOCTL_APP_GET_CAL:
+			if(argp == NULL)
+			{
+				printk(KERN_ERR "IO parameter pointer is NULL!\r\n");
+				break;
+			}
+		     flag=calibration_value;
+                     AKMERR("%s, flag=%d\n",__FUNCTION__, flag);
+		     if (copy_to_user(argp, &flag, sizeof(flag))) {
+		     	return -EFAULT;
+	        	}
+	       	break;
 			
 		default:
 			printk(KERN_ERR "%s not supported = 0x%04x", __FUNCTION__, cmd);
@@ -2565,6 +2570,9 @@ static int akm09911_i2c_probe(struct i2c_client *client, const struct i2c_device
 	struct hwmsen_object sobj_m, sobj_o;
 	struct hwmsen_object sobj_gyro, sobj_rv;
 	struct hwmsen_object sobj_gravity, sobj_la;
+        int  i = 0;
+        int  count = 3;
+        int  calibration_success = 1;
 
 	if(!(data = kmalloc(sizeof(struct akm09911_i2c_data), GFP_KERNEL)))
 	{
@@ -2682,8 +2690,20 @@ static int akm09911_i2c_probe(struct i2c_client *client, const struct i2c_device
 	data->early_drv.resume   = akm09911_late_resume,    
 	register_early_suspend(&data->early_drv);
 #endif
+ 	set_id_value(COMPASS_ID,AKM8963_DEV_NAME);
+       for(i = 0;i  < count;i++)
+       {
+           calibration_value=FctShipmntTestProcess_Body();
+           if(calibration_success == calibration_value)
+           {
+                break;
+           }
+       }
+       AKMERR(" %s,calibration_value=%d\n",__FUNCTION__, calibration_value);
+	//AKMDBG("akm09911_i2c_probe,calibration_value=%d\n",calibration_value);
+	AKMERR("akm09911_i2c_probe OK, calibration_value=%d\n",calibration_value);
 
-	AKMDBG("%s: OK\n", __func__);
+	//AKMDBG("%s: OK\n", __func__);
 	ecompass_status = 1;  
 	return 0;
 
@@ -2713,13 +2733,70 @@ static int akm09911_i2c_remove(struct i2c_client *client)
 	misc_deregister(&akm09911_device);    
 	return 0;
 }
+static int akm_gpio_rst_config()
+{
+
+	int ret = 0;
+	hw_product_type board_id;
+    board_id=get_hardware_product_version();	
+	AKMDBG("akm8963 reset pin is used for this project\n");
+	if((board_id & HW_VER_MAIN_MASK) == HW_G750_VER)
+	{
+		ret = mt_set_gpio_mode(GPIO_COMPASS_RST_PIN, GPIO_MODE_00);
+		if(ret < 0)
+		{
+			printk(KERN_ERR "set gpio mode error\n");
+		}
+		ret = mt_set_gpio_dir(GPIO_COMPASS_RST_PIN, GPIO_DIR_OUT);
+		if(ret < 0)
+		{
+			printk(KERN_ERR "set gpio dir error\n");
+		}
+		ret = mt_set_gpio_out(GPIO_COMPASS_RST_PIN, GPIO_OUT_ZERO);
+		if(ret < 0)
+		{
+			printk(KERN_ERR "set gpio out value error\n");
+		}
+		mdelay(125);  
+		ret = mt_set_gpio_out(GPIO_COMPASS_RST_PIN, GPIO_OUT_ONE);
+		if(ret < 0)
+		{
+			printk(KERN_ERR "set gpio out value error\n");
+		}
+	}
+       else if(((board_id & HW_VER_MAIN_MASK) == HW_H30T_VER )||((board_id & HW_VER_MAIN_MASK) == HW_H30U_VER) ||((board_id & HW_VER_MAIN_MASK) ==  HW_G6T_VER))
+	{
+		ret = mt_set_gpio_mode(GPIO7, GPIO_MODE_00);
+		if(ret < 0)
+		{
+			printk(KERN_ERR "set gpio mode error\n");
+		}
+		ret = mt_set_gpio_dir(GPIO7, GPIO_DIR_OUT);
+		if(ret < 0)
+		{
+			printk(KERN_ERR "set gpio dir error\n");
+		}
+		ret = mt_set_gpio_out(GPIO7, GPIO_OUT_ZERO);
+		if(ret < 0)
+		{
+			printk(KERN_ERR "set gpio out value error\n");
+		}
+		mdelay(125);  
+		ret = mt_set_gpio_out(GPIO7, GPIO_OUT_ONE);
+		if(ret < 0)
+		{
+			printk(KERN_ERR "set gpio out value error\n");
+		}
+	}
+
+}
 /*----------------------------------------------------------------------------*/
 static int akm_probe(struct platform_device *pdev) 
 {
 	struct mag_hw *hw = get_cust_mag_hw();
 
 	akm09911_power(hw, 1);
-	
+	akm_gpio_rst_config();
 	atomic_set(&dev_open_count, 0);
 	//akm09911_force[0] = hw->i2c_num;
 
@@ -2746,7 +2823,7 @@ static int __init akm09911_init(void)
     	struct mag_hw *hw = get_cust_mag_hw();
 	printk("akm09911: i2c_number=%d\n",hw->i2c_num);
 	// register cat /proc/ecompass_status
-	create_proc_read_entry("ecompass_status", 0, NULL, ecompass_status_read_proc, NULL);
+	proc_create("ecompass_status", 0, NULL, ecompass_status_read_proc);
 	i2c_register_board_info(hw->i2c_num, &i2c_akm09911, 1);
 	if(platform_driver_register(&akm_sensor_driver))
 	{
@@ -2764,7 +2841,7 @@ static void __exit akm09911_exit(void)
 module_init(akm09911_init);
 module_exit(akm09911_exit);
 
-MODULE_AUTHOR("viral wang");
+MODULE_AUTHOR("viral wang <viral_wang@htc.com>");
 MODULE_DESCRIPTION("AKM09911 compass driver");
 MODULE_LICENSE("GPL");
 MODULE_VERSION(DRIVER_VERSION);

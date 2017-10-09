@@ -28,23 +28,9 @@ ifeq ($(CONFIG_MTK_LIS3DH_AUTO),y)
 obj-y   +=  accelerometer/lis3dh_auto/
 endif
 
-#ifeq ($(CONFIG_MTK_MPU3000),y)
-#obj-y   +=  gyroscope/mpu3000/
-#endif
-
-#ifeq ($(CONFIG_MTK_MPU3000_NEW),y)
-#obj-y   +=  gyroscope/mpu3000-new/
-#endif
-
-ifeq ($(CONFIG_MTK_ST480_AUTO),y)
-obj-y	+=  magnetometer/st480_auto/
+ifeq ($(CONFIG_MTK_AKM09911),y)
+obj-y   +=  magnetometer/akm09911/
 endif
-
-ifeq ($(CONFIG_MTK_MMC3516X_AUTO),y)
-obj-y	+=  magnetometer/mmc3516x_auto/
-endif
-
-
 endif
 
 ifneq ($(CONFIG_ARCH_MTK_PROJECT),)
