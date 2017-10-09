@@ -38,6 +38,8 @@
 #include <linux/wakelock.h>
 //add for fix resume issue end
 
+#include <linux/hardware_self_adapt.h>
+#include <mtk_kpd.h>
 #include <cust_alsps.h>
 #include <aal_control.h>
 
@@ -83,7 +85,7 @@ static struct sensor_init_info* msensor_init_list[MAX_CHOOSE_G_NUM]= {0}; //modi
 static char alsps_name[25];
 static struct sensor_init_info* alsps_init_list[MAX_CHOOSE_G_NUM]= {0}; //modified
 #endif
-
+static bool suspend_status = false;
 /*----------------------------------------------------------------------------*/
 struct dev_context {
     int		polling_running;
@@ -280,6 +282,14 @@ static void hwmsen_work_func(struct work_struct *work)
 		// Interrupt sensor
 		if(cxt->obj.polling == 0)
 		{
+			/* report 1 when pressing the power key after screen off*/  
+			if((power_key_ps == true && suspend_status == true) && idx == ID_PROXIMITY)  
+			{  
+				HWM_LOG("power_key_ps = %d,idx =%d\n",power_key_ps,idx);  
+				obj_data.data_updata[idx] = 1;  
+				obj_data.sensors_data[idx].values[0] = 1;  
+				power_key_ps = false;  
+			}  
 			if(obj_data.data_updata[idx] == 1)
 			{
 				mutex_lock(&obj_data.lock);
@@ -1627,6 +1637,8 @@ static int alsps_sensor_probe(struct platform_device *pdev)
 	    err = alsps_init_list[i]->init();
 		if(0 == err)
 		{
+			/*for engineer mode*/
+			set_id_value(ALS_PS_ID, alsps_init_list[i]->name);
 		   strcpy(alsps_name,alsps_init_list[i]->name);
 		   HWM_LOG(" alsps sensor %s probe ok\n", alsps_name);
 		   break;

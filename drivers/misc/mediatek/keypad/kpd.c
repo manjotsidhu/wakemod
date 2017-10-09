@@ -30,15 +30,7 @@
 #endif
 
 #define KPD_NAME	"mtk-kpd"
-//#define USE_EARLY_SUSPEND
-//#define MTK_KP_WAKESOURCE	/* this is for auto set wake up source */
-
-
 #define MTK_KP_WAKESOURCE//this is for auto set wake up source
-#define FORCE_POWERKEY_SECONDS   8
-struct timer_list timer;
-//extern void arch_reset(char mode, const char *cmd);
-extern void mt_power_off(void);
 
 struct input_dev *kpd_input_dev;
 static bool kpd_suspend = false;
@@ -92,29 +84,6 @@ static struct platform_driver kpd_pdrv = {
 		.owner = THIS_MODULE,
 	},
 };
-
-static void timer_exit() 
-{ 
-    del_timer(&timer); 
-}
-
-static void timer_function() 
-{ 
-    timer_exit();
-    //arch_reset(0, "charger");
-    mt_power_off();
-}
-
-static int timer_init() 
-{ 
-    init_timer(&timer); 
-    timer.data= 5; 
-    timer.expires = jiffies + (FORCE_POWERKEY_SECONDS*HZ);  
-    timer.function = timer_function; 
-    add_timer(&timer); 
-    printk(KPD_SAY "add_timer for FORCE_POWERKEY\n"); 
-    return 0; 
-}
 /********************************************************************/
 static void kpd_memory_setting(void)
 {
@@ -173,10 +142,11 @@ static int kpd_create_attr(struct device_driver *driver)
 		return -EINVAL;
 	}
 
-	for (idx = 0; idx < num; idx++) {
-		if ((err = driver_create_file(driver, kpd_attr_list[idx]))) {
-			kpd_print("driver_create_file (%s) = %d\n", kpd_attr_list[idx]->attr.name,
-				  err);
+	for(idx = 0; idx < num; idx++)
+	{
+		if((err = driver_create_file(driver, kpd_attr_list[idx])))
+		{            
+			kpd_print("driver_create_file (%s) = %d\n", kpd_attr_list[idx]->attr.name, err);
 			break;
 		}
 	}
@@ -252,11 +222,10 @@ static inline void kpd_update_aee_state(void)
 			if (hrtimer_cancel(&aee_timer)) {
 				kpd_print("try to cancel hrtimer\n");
 #if AEE_ENABLE_5_15
-				if (flags_5s) {
-					printk
-					    ("Pressed Volup + Voldown5s~15s then trigger aee manual dump.\n");
-					aee_kernel_reminding("manual dump",
-							     "Trigger Vol Up +Vol Down 5s");
+				if(flags_5s)
+				{
+					printk("Pressed Volup + Voldown5s~15s then trigger aee manual dump.\n");
+					aee_kernel_reminding("manual dump", "Trigger Vol Up +Vol Down 5s");
 				}
 #endif
 
@@ -379,18 +348,9 @@ void kpd_pwrkey_pmic_handler(unsigned long pressed)
 		printk("KPD input device not ready\n");
 		return;
 	}
-		#ifdef FORCE_POWERKEY
-		  if(pressed == 1)
-		  {
-		      printk(KPD_SAY "timer_init for FORCE_POWERKEY\n"); 
-		      timer_init();
-		  }
-		  else if(pressed == 0)
-		  {
-		      printk(KPD_SAY "timer_exit for FORCE_POWERKEY\n"); 
-		      timer_exit();
-		  }
-		#endif	
+	if(pressed == 1)  
+	power_key_ps = true;  
+	printk(KPD_SAY "KPD power_key_ps =%d \n", power_key_ps);
 	kpd_pmic_pwrkey_hal(pressed);
 }
 #endif
@@ -879,7 +839,10 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 		input_unregister_device(kpd_input_dev);
 		return r;
 	}
+
+#if KPD_PWRKEY_USE_EINT
 	mt_eint_register();
+#endif
 
 #ifndef KPD_EARLY_PORTING	/*add for avoid early porting build err the macro is defined in custom file */
 	long_press_reboot_function_setting();	/* /API 4 for kpd long press reboot function setting */
@@ -918,9 +881,7 @@ static int kpd_pdrv_suspend(struct platform_device *pdev, pm_message_t state)
 		kpd_wakeup_src_setting(0);
 		kpd_print("kpd_early_suspend wake up source disable!! (%d)\n", kpd_suspend);
 	}
-#else	
-	upmu_set_rg_smps_autoff_dis(0x01);
-#endif	
+#endif		
 	kpd_disable_backlight();
 	kpd_print("suspend!! (%d)\n", kpd_suspend);
 	
