@@ -50,6 +50,7 @@
 static void hwmsen_early_suspend(struct early_suspend *h);
 static void hwmsen_late_resume(struct early_suspend *h);
 #endif
+int holster_status= 0;
 static void update_workqueue_polling_rate(int newDelay);
 
 struct workqueue_struct * sensor_workqueue = NULL;
@@ -429,7 +430,17 @@ static void hwmsen_work_func(struct work_struct *work)
 
 	if(obj->dc->polling_running == 1)
 	{
+		if((1 == atomic_read(&hwm_obj->early_suspend))&&( holster_status!=1))
+		
+	    {
+	       // slow down polling rate at early suspend  let system have chance to sleep
+	       mod_timer(&obj->timer, jiffies + (HZ/7));
+		   HWM_LOG("hwm_dev early suspend work polling\n");
+	    }
+		else
+		{
 		mod_timer(&obj->timer, jiffies + atomic_read(&obj->delay)/(1000/HZ)); 
+		}
 	}
 }
 
@@ -1278,6 +1289,24 @@ static struct file_operations hwmsen_fops = {
 	.unlocked_ioctl = hwmsen_unlocked_ioctl,
 };
 /*----------------------------------------------------------------------------*/
+static ssize_t holster_mode_store(struct device *dev, struct device_attribute *attr, char *buf, size_t count)
+{
+	int rc =0;
+	rc = kstrtoul(buf, 10, &holster_status);
+	HWM_ERR("%s: holster_statu=%d\n", __func__,holster_status);
+	if (rc < 0) {
+		HWM_ERR("%s: Invalid value.\n", __func__);
+		goto exit;
+	}
+	if(1==holster_status)
+	{
+		hwmsen_enable(hwm_obj, 0, 1);
+		hwmsen_set_delay(10, 0);
+	}
+	exit:
+	return count;
+}
+static DEVICE_ATTR(holster, 0664,NULL, holster_mode_store);
 static int hwmsen_probe(struct platform_device *pdev) 
 {
 

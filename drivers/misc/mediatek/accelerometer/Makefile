@@ -4,10 +4,6 @@ include $(srctree)/drivers/misc/mediatek/Makefile.custom
 
 obj-y   +=  accel.o accel_factory.o
 
-ifeq ($(CONFIG_MTK_BMA222E),y)
-obj-y   +=  bma222E/
-endif
-
 ifeq ($(CONFIG_MTK_MMA8452Q_AUTO),y)
 obj-y   +=  mma8452q_auto/
 endif

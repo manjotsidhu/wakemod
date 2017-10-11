@@ -2040,7 +2040,7 @@ static int __init kx023_init(void)
 	struct acc_hw *hw = kx023_get_cust_acc_hw();
 	GSE_LOG("%s: i2c_number=%d\n", __func__,hw->i2c_num);
 	i2c_register_board_info(hw->i2c_num, &i2c_kx023, 1);
-	//hwmsen_gsensor_add(&kx023_init_info);
+	hwmsen_gsensor_add(&kx023_init_info);
 #if 0
 	if(platform_driver_register(&kx023_gsensor_driver))
 	{

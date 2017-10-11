@@ -2217,7 +2217,7 @@ static int __init lis3dh_init(void)
 	struct acc_hw *hw = lis3dh_get_cust_acc_hw();
 	GSE_LOG("%s: i2c_number=%d\n", __func__,hw->i2c_num); 
 	i2c_register_board_info(hw->i2c_num, &i2c_LIS3DH, 1);
-	//hwmsen_gsensor_add(&lis3dh_init_info);
+	hwmsen_gsensor_add(&lis3dh_init_info);
 	return 0;    
 }
 /*----------------------------------------------------------------------------*/

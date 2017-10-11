@@ -25,7 +25,7 @@ nocol='\033[0m'
 # Modify the following variable if you want to build
 export ARCH=arm
 export ARCH_MTK_PLATFORM=mt6582
-export CROSS_COMPILE=/home/popz/Desktop/toolchain/arm-eabi-4.7/bin/arm-eabi-
+export CROSS_COMPILE=/home/popz/Desktop/toolchain/arm-eabi-4.8/bin/arm-eabi-
 export KBUILD_BUILD_USER="PopZ"
 export KBUILD_BUILD_HOST="ImranPopZ"
 
