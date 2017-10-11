@@ -1138,12 +1138,21 @@ inline static int adopt_CAMERA_HW_CheckIsAlive(void)
                     PK_DBG(" Not implement!!, use old open function to check\n");
                     err = ERROR_SENSOR_CONNECT_FAIL;
                 }
-                else if (sensorID == 0xFFFFFFFF) {    //fail to open the sensor
-                    PK_DBG(" No Sensor Found");
-                    err = ERROR_SENSOR_CONNECT_FAIL;
-                }
-                else {
-
+		        else if (sensorID == 0xFFFFFFFF) {    //fail to open the sensor
+		            PK_DBG(" No Sensor Found");
+		            err = ERROR_SENSOR_CONNECT_FAIL;
+		        }
+		        else {
+                            //add sensor id for app_info
+                            if(DUAL_CAMERA_MAIN_SENSOR == g_invokeSocketIdx[i]){ /*set main1sensor id*/
+                                set_id_value(PRIMARY_CAMERA_ID, g_invokeSensorNameStr[i]);
+                            }
+                            else if(DUAL_CAMERA_SUB_SENSOR == g_invokeSocketIdx[i]){ /*set subsensor id*/
+                                set_id_value(SLAVE_CAMERA_ID, g_invokeSensorNameStr[i]);
+                            }
+                            else if(DUAL_CAMERA_MAIN_SECOND_SENSOR == g_invokeSocketIdx[i]){/*set main2sensor id*/
+                                set_id_value(PRIMARY_CAMERA_ID, g_invokeSensorNameStr[i]);
+                            }
                     PK_DBG(" Sensor found ID = 0x%x\n", sensorID);
                     err = ERROR_NONE;
                 }
