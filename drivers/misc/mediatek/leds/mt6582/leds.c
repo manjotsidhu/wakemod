@@ -36,8 +36,7 @@
 //#include <linux/leds_sw.h>
 //#include <mach/mt_pmic_feature_api.h>
 //#include <mach/mt_boot.h>
-
-
+#include <linux/hardware_self_adapt.h>
 static DEFINE_MUTEX(leds_mutex);
 static DEFINE_MUTEX(leds_pmic_mutex);
 //#define ISINK_CHOP_CLK
@@ -271,7 +270,7 @@ static int led_breath_pmic(enum mt65xx_led_pmic pmic_type, struct nled_setting* 
 #endif
 
 
-#define PMIC_PERIOD_NUM 8
+#define PMIC_PERIOD_NUM 9
 // 100 * period, ex: 0.01 Hz -> 0.01 * 100 = 1
 int pmic_period_array[] = {250,500,1000,1250,1666,2000,2500,10000};
 //int pmic_freqsel_array[] = {99999, 9999, 4999, 1999, 999, 499, 199, 4, 0};
@@ -588,7 +587,8 @@ int mt_brightness_set_pmic(enum mt65xx_led_pmic pmic_type, u32 level, u32 div)
     	};
 
 	LEDS_DEBUG("[LED]PMIC#%d:%d\n", pmic_type, level);
-	mutex_lock(&leds_pmic_mutex);
+	hw_product_type boardType = get_hardware_product_version();
+   	mutex_lock(&leds_pmic_mutex);
 	if (pmic_type == MT65XX_LED_PMIC_LCD_ISINK)
 	{
 		if(backlight_init_flag == false)
@@ -800,7 +800,18 @@ int mt_brightness_set_pmic(enum mt65xx_led_pmic pmic_type, u32 level, u32 div)
 					upmu_set_isink_ch2_en(0);
 				first_time = false;
 			}
-
+		        if((boardType & HW_VER_MAIN_MASK) == HW_G6T_VER)
+		        {
+	                       upmu_set_rg_drv_32k_ck_pdn(0x0); // Disable power down  
+	                       upmu_set_rg_isink3_ck_pdn(0);
+	                       upmu_set_rg_isink3_ck_sel(0);
+	                       upmu_set_isink_ch3_mode(PMIC_PWM_0);
+	                       upmu_set_isink_ch3_step(0x3);//16mA
+			       upmu_set_isink_dim3_duty(19);
+			       upmu_set_isink_dim3_fsel(0);//6323 1KHz
+		        }
+		        else
+			{
 				upmu_set_rg_drv_32k_ck_pdn(0x0); // Disable power down  
 				upmu_set_rg_isink3_ck_pdn(0);
 				upmu_set_rg_isink3_ck_sel(0);
@@ -809,7 +820,8 @@ int mt_brightness_set_pmic(enum mt65xx_led_pmic pmic_type, u32 level, u32 div)
 				//hwPWMsetting(PMIC_PWM_1, 15, 8);
 				upmu_set_isink_dim3_duty(15);
 				upmu_set_isink_dim3_fsel(0);//6323 1KHz
-
+			}
+   
 			
 			if (level) 
 			{
@@ -1012,43 +1024,80 @@ void mt_mt65xx_led_set(struct led_classdev *led_cdev, enum led_brightness level)
 	//unsigned long flags;
 	//spin_lock_irqsave(&leds_lock, flags);
 	
-#ifdef CONFIG_MTK_AAL_SUPPORT
-	if(led_data->level != level)
-	{
-		led_data->level = level;
-		if(strcmp(led_data->cust.name,"lcd-backlight") != 0)
+#ifdef LED_INCREASE_LED_LEVEL_MTKPATCH
+	
+		if(level >> LED_RESERVEBIT_SHIFT)
 		{
-			LEDS_DEBUG("[LED]Set NLED directly %d at time %lu\n",led_data->level,jiffies);
-			schedule_work(&led_data->work);				
+			if(LED_RESERVEBIT_PATTERN != (level >> LED_RESERVEBIT_SHIFT))
+			{
+				//sanity check for hidden code
+				printk("incorrect input : %d,%d\n" , level , (level >> LED_RESERVEBIT_SHIFT));
+				return;
+			}
+	
+			if(MT65XX_LED_MODE_CUST_BLS_PWM != led_data->cust.mode)
+			{
+				//only BLS PWM support expand bit
+				printk("Not BLS PWM %d \n" , led_data->cust.mode);
+				return;
+			}
+	
+			level &= ((1 << LED_RESERVEBIT_SHIFT) - 1);
+	
+			if((level +1) > (1 << MT_LED_INTERNAL_LEVEL_BIT_CNT))
+			{
+				//clip to max value
+				level = (1 << MT_LED_INTERNAL_LEVEL_BIT_CNT) - 1;
+			}
+	
+			led_cdev->brightness = (level >> (MT_LED_INTERNAL_LEVEL_BIT_CNT - 8));//brightness is 8 bit level
+			if(led_cdev->brightness > led_cdev->max_brightness)
+			{
+				led_cdev->brightness = led_cdev->max_brightness;
+			}
+	
+			if(led_data->level != level)
+			{
+				led_data->level = level;
+				mt_mt65xx_led_set_cust(&led_data->cust, led_data->level);
+			}
 		}
 		else
 		{
-			LEDS_DEBUG("[LED]Set Backlight directly %d at time %lu\n",led_data->level,jiffies);
-			//mt_mt65xx_led_set_cust(&led_data->cust, led_data->level);	
-			disp_aal_notify_backlight_changed( (((1 << MT_LED_INTERNAL_LEVEL_BIT_CNT) - 1)*level + 127)/255 );
-		}
-	}
+			if(led_data->level != level)
+			{
+				led_data->level = level;
+				if(strcmp(led_data->cust.name,"lcd-backlight") != 0)
+				{
+					LEDS_DEBUG("[LED]Set NLED directly %d at time %lu\n",led_data->level,jiffies);
+					schedule_work(&led_data->work);				
+				}
+			    else
+				{
+					LEDS_DEBUG("[LED]Set Backlight directly %d at time %lu\n",led_data->level,jiffies);
+					if(MT65XX_LED_MODE_CUST_BLS_PWM == led_data->cust.mode)
+					{
+						mt_mt65xx_led_set_cust(&led_data->cust, ((((1 << MT_LED_INTERNAL_LEVEL_BIT_CNT) - 1)*level + 127)/255));
+						//mt_mt65xx_led_set_cust(&led_data->cust, led_data->level);	
+					}
+					else
+					{
+						mt_mt65xx_led_set_cust(&led_data->cust, led_data->level);	
+					}	
+				}
+			}
+		}						
 #else
 	// do something only when level is changed
-	if(led_data->level != level)
-	{
+	if (led_data->level != level) {
 		led_data->level = level;
-		if(strcmp(led_data->cust.name,"lcd-backlight") != 0)
+		if(strcmp(led_data->cust.name,"lcd-backlight"))
 		{
-			LEDS_DEBUG("[LED]Set NLED directly %d at time %lu\n",led_data->level,jiffies);
-			schedule_work(&led_data->work);				
-		}
-		else
+				schedule_work(&led_data->work);
+		}else
 		{
-			LEDS_DEBUG("[LED]Set Backlight directly %d at time %lu\n",led_data->level,jiffies);
-			if(MT65XX_LED_MODE_CUST_BLS_PWM == led_data->cust.mode)
-			{
-				mt_mt65xx_led_set_cust(&led_data->cust, ((((1 << MT_LED_INTERNAL_LEVEL_BIT_CNT) - 1)*level + 127)/255));
-			}
-			else
-			{
+				LEDS_DEBUG("[LED]Set Backlight directly %d at time %lu\n",led_data->level,jiffies);
 				mt_mt65xx_led_set_cust(&led_data->cust, led_data->level);	
-			}	
 		}
 	}
 	//spin_unlock_irqrestore(&leds_lock, flags);
