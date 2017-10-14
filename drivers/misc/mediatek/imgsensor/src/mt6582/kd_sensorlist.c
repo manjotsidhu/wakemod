@@ -25,10 +25,13 @@
 #include <mach/sync_write.h>
 #include <mach/mt_gpio.h>
 
+
+
+//add sensor id for app_info
+#include <linux/hardware_self_adapt.h>
 static DEFINE_SPINLOCK(kdsensor_drv_lock);
 
-#define SUPPORT_I2C_BUS_NUM1          0
-//#define SUPPORT_I2C_BUS_NUM2        2
+#define SUPPORT_I2C_BUS_NUM1        1
 
 
 #define CAMERA_HW_DRVNAME1  "kd_camera_hw"
@@ -206,7 +209,7 @@ inline static void KD_IMGSENSOR_PROFILE(char *tag) {}
 *
 ********************************************************************************/
 extern int kdCISModulePowerOn(CAMERA_DUAL_CAMERA_SENSOR_ENUM SensorIdx, char *currSensorName,BOOL On, char* mode_name);
-//extern ssize_t strobe_VDIrq(void);  //cotta : add for high current solution
+extern ssize_t strobe_VDIrq(void);  //cotta : add for high current solution
 
 /*******************************************************************************
 *
@@ -336,58 +339,6 @@ int iReadRegI2C(u8 *a_pSendData , u16 a_sizeSendData, u8 * a_pRecvData, u16 a_si
     return 0;
 }
 
-/*******************************************************************************
-* iBurstReadRegI2C
-********************************************************************************/
-int iBurstReadRegI2C(u8 *a_pSendData , u16 a_sizeSendData, u8 * a_pRecvData, u16 a_sizeRecvData, u16 i2cId)
-{
-    int  i4RetValue = 0;
-    u32 phyAddr = 0;
-    u8 *buf = NULL;
-
-		spin_lock(&kdsensor_drv_lock);
-	    g_pstI2Cclient->addr = (i2cId >> 1);
-	    g_pstI2Cclient->ext_flag = (g_pstI2Cclient->ext_flag)&(~I2C_DMA_FLAG);
-		spin_unlock(&kdsensor_drv_lock);
-	    //
-	    i4RetValue = i2c_master_send(g_pstI2Cclient, a_pSendData, a_sizeSendData);
-	    if (i4RetValue != a_sizeSendData) {
-	        PK_DBG("[CAMERA SENSOR] I2C send failed!!, Addr = 0x%x\n", a_pSendData[0]);
-	        return -1;
-	    }
-	    
-	    spin_lock(&kdsensor_drv_lock);	    
-	    g_pstI2Cclient->ext_flag = (g_pstI2Cclient->ext_flag) | (I2C_DMA_FLAG);
-		  spin_unlock(&kdsensor_drv_lock);
-		  
-		  if (a_sizeRecvData > 255) {
-	        PK_DBG("[iBurstWriteReg] exceed the max write length \n");
-	        return 1;
-	    }
-	    phyAddr = 0;
-
-	    buf = dma_alloc_coherent(0, a_sizeRecvData, &phyAddr, GFP_KERNEL);
-
-	    if (NULL == buf) {
-	        PK_DBG("[iBurstWriteReg] Not enough memory \n");
-	        return -1;
-	    }
-		  
-		  PK_DBG("[iBurstReadRegI2C] g_pstI2Cclient->ext_flag=%x %x %x\n",g_pstI2Cclient->ext_flag,phyAddr,buf);
-
-	    //i4RetValue = i2c_master_recv(g_pstI2Cclient, (char *)a_pRecvData, a_sizeRecvData);
-	    i4RetValue = i2c_master_recv(g_pstI2Cclient, (char *)phyAddr, a_sizeRecvData);
-	    if (i4RetValue != a_sizeRecvData) {
-	        PK_DBG("[CAMERA SENSOR] I2C read failed!! \n");
-	        return -1;
-	    }
-	    
-	    memcpy(a_pRecvData, buf, a_sizeRecvData);
-	    
-	    dma_free_coherent(0, a_sizeRecvData, buf, phyAddr);
-	    
-    return 0;
-}
 
 /*******************************************************************************
 * iWriteReg
@@ -660,28 +611,15 @@ MSDK_SENSOR_RESOLUTION_INFO_STRUCT *pSensorResolution[2])
 {        
     MUINT32 ret = ERROR_NONE;
     u32 i = 0;
-	int access_ret = 0;
     KD_MULTI_FUNCTION_ENTRY();
     for ( i = KDIMGSENSOR_INVOKE_DRIVER_0 ; i < KDIMGSENSOR_MAX_INVOKE_DRIVERS ; i++ ) {
         if ( g_bEnableDriver[i] && g_pInvokeSensorFunc[i] ) {
-            if(DUAL_CAMERA_MAIN_SENSOR==g_invokeSocketIdx[i]){
-				access_ret = access_ok(VERIFY_WRITE, (void __user *)pSensorResolution[0], sizeof(MSDK_SENSOR_RESOLUTION_INFO_STRUCT));
-				if(access_ret == 0)
-				{ 
-					PK_ERR("kd_MultiSensorGetResolution access_ok pSensorResolution[0] return failed!\n");
-					return ERROR_INVALID_PARA;
-				} 
-                ret = g_pInvokeSensorFunc[i]->SensorGetResolution(pSensorResolution[0]);
-            }
-            else if(DUAL_CAMERA_SUB_SENSOR==g_invokeSocketIdx[i]) {
-				access_ret = access_ok(VERIFY_WRITE, (void __user *)pSensorResolution[1], sizeof(MSDK_SENSOR_RESOLUTION_INFO_STRUCT));
-				if(access_ret == 0)
-				{
-					PK_ERR("kd_MultiSensorGetResolution access_ok pSensorResolution[1] return failed!\n");
-					return ERROR_INVALID_PARA;
-				}
-                ret = g_pInvokeSensorFunc[i]->SensorGetResolution(pSensorResolution[1]);
-            }
+			if(DUAL_CAMERA_MAIN_SENSOR==g_invokeSocketIdx[i]){
+	            ret = g_pInvokeSensorFunc[i]->SensorGetResolution(pSensorResolution[0]);
+			}
+			else if(DUAL_CAMERA_SUB_SENSOR==g_invokeSocketIdx[i]) {
+				ret = g_pInvokeSensorFunc[i]->SensorGetResolution(pSensorResolution[1]);
+			}
 
             if ( ERROR_NONE != ret ) {
                 PK_ERR("[%s]\n",__FUNCTION__);
@@ -925,7 +863,7 @@ int kdSetSensorSyncFlag(BOOL bSensorSync)
     spin_unlock(&kdsensor_drv_lock);
 //    PK_DBG("[Sensor] kdSetSensorSyncFlag:%d\n", bSesnorVsyncFlag);
 
-    //strobe_VDIrq(); //cotta : added for high current solution
+    strobe_VDIrq(); //cotta : added for high current solution
 
     return 0;
 }
@@ -1143,7 +1081,16 @@ inline static int adopt_CAMERA_HW_CheckIsAlive(void)
                     err = ERROR_SENSOR_CONNECT_FAIL;
                 }
                 else {
-
+                            //add sensor id for app_info
+                            if(DUAL_CAMERA_MAIN_SENSOR == g_invokeSocketIdx[i]){ /*set main1sensor id*/
+                                set_id_value(PRIMARY_CAMERA_ID, g_invokeSensorNameStr[i]);
+                            }
+                            else if(DUAL_CAMERA_SUB_SENSOR == g_invokeSocketIdx[i]){ /*set subsensor id*/
+                                set_id_value(SLAVE_CAMERA_ID, g_invokeSensorNameStr[i]);
+                            }
+                            else if(DUAL_CAMERA_MAIN_SECOND_SENSOR == g_invokeSocketIdx[i]){/*set main2sensor id*/
+                                set_id_value(PRIMARY_CAMERA_ID, g_invokeSensorNameStr[i]);
+                            }
                     PK_DBG(" Sensor found ID = 0x%x\n", sensorID);
                     err = ERROR_NONE;
                 }
@@ -1603,18 +1550,18 @@ inline static int kdSetSensorGpio(int* pBuf)
 {
     int ret = 0;
     unsigned int temp = 0;
-    IMGSENSOR_GPIO_STRUCT *pSensorgpio = (IMGSENSOR_GPIO_STRUCT*)pBuf;
+    ACDK_SENSOR_GPIO_STRUCT *pSensorgpio = (ACDK_SENSOR_GPIO_STRUCT*)pBuf;
    
     PK_DBG("[CAMERA SENSOR] kdSetSensorGpio device=%d, enable=%d, type=%d\n",
         pSensorgpio->mSensorDev,pSensorgpio->GpioEnable,pSensorgpio->SensroInterfaceType);
     //Please use DCT to set correct GPIO setting (below message only for debug)
-    if(pSensorgpio->SensroInterfaceType == SENSORIF_PARALLEL)
+    if(pSensorgpio->SensroInterfaceType == SENSOR_INTERFACE_TYPE_PARALLEL)
     {
         //disable mipi pin
         temp = SENSOR_RD32((void *)(GPIO_BASE + 0x910));//GPI*_IES = 1 for Parallel CAM     
         SENSOR_WR32((void *)(GPIO_BASE + 0x910),temp|0x80); 
 
-        //Change to use gpio API to set mode
+        /* Change to use gpio API to set mode
         //mode 2 for parallel pin  (GPIO141~146, 153~156)
         temp = SENSOR_RD32((void *)(GPIO_BASE + 0x7C0));
         SENSOR_WR32((void *)(GPIO_BASE + 0x7C0),(temp&0x7)|0x2490); 
@@ -1627,8 +1574,8 @@ inline static int kdSetSensorGpio(int* pBuf)
         //mode 1 for parallel pin (GPIO120~123)
         temp = SENSOR_RD32((void *)(GPIO_BASE + 0x780));
         SENSOR_WR32((void *)(GPIO_BASE + 0x780),(temp&0xF000)|0x249);
-        
-      /*
+        */
+
         // mode 2 for parallel pin  (GPIO141~146, 153~156)
         mt_set_gpio_mode(GPIO141, GPIO_MODE_02);
         mt_set_gpio_mode(GPIO142, GPIO_MODE_02);
@@ -1645,7 +1592,7 @@ inline static int kdSetSensorGpio(int* pBuf)
         mt_set_gpio_mode(GPIO121, GPIO_MODE_01);
         mt_set_gpio_mode(GPIO122, GPIO_MODE_01);
         mt_set_gpio_mode(GPIO123, GPIO_MODE_01);
-        */
+
         //mode 1 for parallel pin (GPIO120~123)
         PK_DBG("GPIO121~GPIO123 0x%x\n",SENSOR_RD32((void *)(GPIO_BASE + 0x780)));
         //mode 2 for parallel pin  (GPIO141~146, 153~156)
@@ -1664,7 +1611,7 @@ inline static int kdSetSensorGpio(int* pBuf)
             // for mipi gpio setting debug    
             if(pSensorgpio->mSensorDev == DUAL_CAMERA_MAIN_SENSOR)
             {
-                //Change to use gpio API to set mode
+                /* Change to use gpio API to set mode
                 //mode 1   (GPIO147~156)
                 temp = SENSOR_RD32((void *)(GPIO_BASE + 0x7D0));
                 SENSOR_WR32((void *)(GPIO_BASE + 0x7D0),(temp&0x3F)|0x1240); 
@@ -1672,8 +1619,8 @@ inline static int kdSetSensorGpio(int* pBuf)
                 SENSOR_WR32((void *)(GPIO_BASE + 0x7E0),(temp&0x0)|0x1249); 
                 temp = SENSOR_RD32((void *)(GPIO_BASE + 0x7F0));
                 SENSOR_WR32((void *)(GPIO_BASE + 0x7F0),(temp&0xFFC0)|0x9);
-                
-                /*
+                */
+
                 // mode 1   (GPIO147~156)
                 mt_set_gpio_mode(GPIO147, GPIO_MODE_01);
                 mt_set_gpio_mode(GPIO148, GPIO_MODE_01);
@@ -1685,7 +1632,7 @@ inline static int kdSetSensorGpio(int* pBuf)
                 mt_set_gpio_mode(GPIO154, GPIO_MODE_01);
                 mt_set_gpio_mode(GPIO155, GPIO_MODE_01);
                 mt_set_gpio_mode(GPIO156, GPIO_MODE_01);
-                */
+
 
                 //mode 1   (GPIO147~156)
                 PK_DBG("GPIO147~GPIO156 0x%x, 0x%x, 0x%x\n",SENSOR_RD32((void *)(GPIO_BASE + 0x7d0)),
@@ -1693,14 +1640,14 @@ inline static int kdSetSensorGpio(int* pBuf)
             }
             else
             {
-                
+                /*
                 //mode 1   (GPIO141~146)
                 temp = SENSOR_RD32((void *)(GPIO_BASE + 0x7C0));
                 SENSOR_WR32((void *)(GPIO_BASE + 0x7C0),((temp&0x7)|0x1248)); 
                 temp = SENSOR_RD32((void *)(GPIO_BASE + 0x7D0));
                 SENSOR_WR32((void *)(GPIO_BASE + 0x7D0),(temp&0xFFC0)|0x9);
-                
-                /*
+                */
+
                 //mode 1   (GPIO141~146)
                 mt_set_gpio_mode(GPIO141, GPIO_MODE_01);
                 mt_set_gpio_mode(GPIO142, GPIO_MODE_01);
@@ -1708,7 +1655,7 @@ inline static int kdSetSensorGpio(int* pBuf)
                 mt_set_gpio_mode(GPIO144, GPIO_MODE_01);
                 mt_set_gpio_mode(GPIO145, GPIO_MODE_01);
                 mt_set_gpio_mode(GPIO146, GPIO_MODE_01);
-                */
+                
                 //mode 1   (GPIO141~146)
                 PK_DBG("GPIO141~GPIO146 0x%x, 0x%x\n",SENSOR_RD32((void *)(GPIO_BASE + 0x7c0)),
                 SENSOR_RD32((void *)(GPIO_BASE + 0x7d0)));
@@ -2069,8 +2016,8 @@ static int CAMERA_HW_resume(struct platform_device *pdev)
   * CAMERA_HW_DumpReg_To_Proc()
   * Used to dump some critical sensor register
   ********************************************************************************/
-static ssize_t CAMERA_HW_DumpReg_To_Proc(struct file *file, char *buffer, size_t count,
-					 loff_t *offp)
+static int  CAMERA_HW_DumpReg_To_Proc(char *page, char **start, off_t off,
+                                                                                       int count, int *eof, void *data)
 {
 	return count;
 }
@@ -2079,8 +2026,8 @@ static ssize_t CAMERA_HW_DumpReg_To_Proc(struct file *file, char *buffer, size_t
   * CAMERA_HW_Reg_Debug()
   * Used for sensor register read/write by proc file
   ********************************************************************************/
-static ssize_t CAMERA_HW_Reg_Debug(struct file *file, const char *buffer, size_t count,
-				   loff_t *data)
+static int  CAMERA_HW_Reg_Debug( struct file *file, const char *buffer, unsigned long count,
+                                                                     void *data)
 {
 	char regBuf[64] = { '\0' };
 	u32 u4CopyBufSize = (count < (sizeof(regBuf) - 1)) ? (count) : (sizeof(regBuf) - 1);
@@ -2091,32 +2038,19 @@ static ssize_t CAMERA_HW_Reg_Debug(struct file *file, const char *buffer, size_t
 	if (copy_from_user(regBuf, buffer, u4CopyBufSize))
 		return -EFAULT;
 
-	if (sscanf(regBuf, "%x %x", &sensorReg.RegAddr, &sensorReg.RegData) == 2) {
-		if (g_pSensorFunc != NULL) {
-			g_pSensorFunc->SensorFeatureControl(DUAL_CAMERA_MAIN_SENSOR,
-							    SENSOR_FEATURE_SET_REGISTER,
-							    (MUINT8 *) &sensorReg,
-							    (MUINT32 *)
-							    sizeof(MSDK_SENSOR_REG_INFO_STRUCT));
-			g_pSensorFunc->SensorFeatureControl(DUAL_CAMERA_MAIN_SENSOR,
-							    SENSOR_FEATURE_GET_REGISTER,
-							    (MUINT8 *) &sensorReg,
-							    (MUINT32 *)
-							    sizeof(MSDK_SENSOR_REG_INFO_STRUCT));
-			PK_DBG("write addr = 0x%08x, data = 0x%08x\n", sensorReg.RegAddr,
-			       sensorReg.RegData);
-		}
-	} else if (sscanf(regBuf, "%x", &sensorReg.RegAddr) == 1) {
-		if (g_pSensorFunc != NULL) {
-			g_pSensorFunc->SensorFeatureControl(DUAL_CAMERA_MAIN_SENSOR,
-							    SENSOR_FEATURE_GET_REGISTER,
-							    (MUINT8 *) &sensorReg,
-							    (MUINT32 *)
-							    sizeof(MSDK_SENSOR_REG_INFO_STRUCT));
-			PK_DBG("read addr = 0x%08x, data = 0x%08x\n", sensorReg.RegAddr,
-			       sensorReg.RegData);
-		}
-	}
+    if (sscanf(regBuf, "%x %x",  &sensorReg.RegAddr, &sensorReg.RegData) == 2) {
+        if (g_pSensorFunc != NULL) {
+            g_pSensorFunc->SensorFeatureControl(DUAL_CAMERA_MAIN_SENSOR, SENSOR_FEATURE_SET_REGISTER, (MUINT8*)&sensorReg, (MUINT32*)sizeof(MSDK_SENSOR_REG_INFO_STRUCT));
+            g_pSensorFunc->SensorFeatureControl(DUAL_CAMERA_MAIN_SENSOR, SENSOR_FEATURE_GET_REGISTER, (MUINT8*)&sensorReg, (MUINT32*)sizeof(MSDK_SENSOR_REG_INFO_STRUCT));
+            PK_DBG("write addr = 0x%08x, data = 0x%08x\n", sensorReg.RegAddr, sensorReg.RegData);
+        }
+    }
+    else if (sscanf(regBuf, "%x", &sensorReg.RegAddr) == 1) {
+        if (g_pSensorFunc != NULL) {
+            g_pSensorFunc->SensorFeatureControl(DUAL_CAMERA_MAIN_SENSOR, SENSOR_FEATURE_GET_REGISTER, (MUINT8*)&sensorReg, (MUINT32*)sizeof(MSDK_SENSOR_REG_INFO_STRUCT));
+            PK_DBG("read addr = 0x%08x, data = 0x%08x\n", sensorReg.RegAddr, sensorReg.RegData);
+        }
+    }
 
 	return count;
 }
@@ -2180,6 +2114,9 @@ static int __init CAMERA_HW_i2C_init(void)
 #endif
     atomic_set(&g_CamHWOpend, 0);
 
+    atomic_set(&g_CamDrvOpenCnt, 0);
+
+    atomic_set(&g_CamHWOpening, 0);
     return 0;
 }
 

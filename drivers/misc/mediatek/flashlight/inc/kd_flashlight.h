@@ -51,9 +51,9 @@ typedef enum
     e_CAMERA_NONE_SENSOR=0,
     e_CAMERA_MAIN_SENSOR     = 1,
     e_CAMERA_SUB_SENSOR      = 2,
-    e_CAMERA_MAIN_2_SENSOR   = 4,
+    e_CAMERA_MAIN_2_SENSOR   = 8,
     //for backward compatible
-    e_CAMERA_MAIN_SECOND_SENSOR = 4,
+    e_CAMERA_MAIN_SECOND_SENSOR = 8,
     //DUAL_CAMERA_SUB_2_SENSOR   = 16,
     e_CAMERA_SENSOR_MAX
 } eFlashSensorId;
@@ -68,7 +68,7 @@ typedef struct
 {
     int (* flashlight_open)(void *pArg);
     int (* flashlight_release)(void *pArg);
-    int (* flashlight_ioctl)(unsigned int cmd, unsigned long arg);
+    int (* flashlight_ioctl)(MUINT32 cmd, MUINT32 arg);
 } FLASHLIGHT_FUNCTION_STRUCT, *PFLASHLIGHT_FUNCTION_STRUCT;
 
 

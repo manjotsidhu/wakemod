@@ -2,12 +2,6 @@
 #define _KD_IMGSENSOR_H
 
 #include <linux/ioctl.h>
-//#define CONFIG_COMPAT
-#ifdef CONFIG_COMPAT
-//64 bit
-#include <linux/fs.h>
-#include <linux/compat.h>
-#endif
 
 #ifndef ASSERT
 #define ASSERT(expr)        BUG_ON(!(expr))
@@ -49,59 +43,45 @@
 *
 ********************************************************************************/
 
-/* sensorOpen */
-#define KDIMGSENSORIOC_T_OPEN               _IO(IMGSENSORMAGIC, 0)
-/* sensorGetInfo */
-#define KDIMGSENSORIOC_X_GETINFO            _IOWR(IMGSENSORMAGIC, 5, ACDK_SENSOR_GETINFO_STRUCT)
-/* sensorGetResolution */
-#define KDIMGSENSORIOC_X_GETRESOLUTION      _IOWR(IMGSENSORMAGIC, 10, ACDK_SENSOR_RESOLUTION_INFO_STRUCT)
-/* For kernel 64-bit */
-#define KDIMGSENSORIOC_X_GETRESOLUTION2      _IOWR(IMGSENSORMAGIC, 10, ACDK_SENSOR_PRESOLUTION_STRUCT)
-/* sensorFeatureControl */
-#define KDIMGSENSORIOC_X_FEATURECONCTROL    _IOWR(IMGSENSORMAGIC, 15, ACDK_SENSOR_FEATURECONTROL_STRUCT)
-/* sensorControl */
-#define KDIMGSENSORIOC_X_CONTROL            _IOWR(IMGSENSORMAGIC, 20, ACDK_SENSOR_CONTROL_STRUCT)
-/* sensorClose */
-#define KDIMGSENSORIOC_T_CLOSE              _IO(IMGSENSORMAGIC, 25)
-/* sensorSearch */
-#define KDIMGSENSORIOC_T_CHECK_IS_ALIVE     _IO(IMGSENSORMAGIC, 30)
-/* set sensor driver */
-#define KDIMGSENSORIOC_X_SET_DRIVER         _IOWR(IMGSENSORMAGIC, 35, SENSOR_DRIVER_INDEX_STRUCT)
-/* get socket postion */
-#define KDIMGSENSORIOC_X_GET_SOCKET_POS     _IOWR(IMGSENSORMAGIC, 40, u32)
-/* set I2C bus */
-#define KDIMGSENSORIOC_X_SET_I2CBUS                 _IOWR(IMGSENSORMAGIC, 45, u32)
-/* set I2C bus */
-#define KDIMGSENSORIOC_X_RELEASE_I2C_TRIGGER_LOCK   _IO(IMGSENSORMAGIC, 50)
-/* Set Shutter Gain Wait Done */
-#define KDIMGSENSORIOC_X_SET_SHUTTER_GAIN_WAIT_DONE _IOWR(IMGSENSORMAGIC, 55, u32)
-/* set mclk */
-#define KDIMGSENSORIOC_X_SET_MCLK_PLL               _IOWR(IMGSENSORMAGIC, 60, ACDK_SENSOR_MCLK_STRUCT)
-#define KDIMGSENSORIOC_X_GETINFO2                   _IOWR(IMGSENSORMAGIC, 65, IMAGESENSOR_GETINFO_STRUCT)
-/* set open/close sensor index */
-#define KDIMGSENSORIOC_X_SET_CURRENT_SENSOR         _IOWR(IMGSENSORMAGIC, 70, u32)
+//sensorOpen
+//This command will TBD
+#define KDIMGSENSORIOC_T_OPEN            _IO(IMGSENSORMAGIC,0)
+//sensorGetInfo
+//This command will TBD
+#define KDIMGSENSORIOC_X_GETINFO            _IOWR(IMGSENSORMAGIC,5,ACDK_SENSOR_GETINFO_STRUCT)
+//sensorGetResolution
+//This command will TBD
+#define KDIMGSENSORIOC_X_GETRESOLUTION      _IOWR(IMGSENSORMAGIC,10,ACDK_SENSOR_RESOLUTION_INFO_STRUCT)
+//sensorFeatureControl
+//This command will TBD
+#define KDIMGSENSORIOC_X_FEATURECONCTROL    _IOWR(IMGSENSORMAGIC,15,ACDK_SENSOR_FEATURECONTROL_STRUCT)
+//sensorControl
+//This command will TBD
+#define KDIMGSENSORIOC_X_CONTROL            _IOWR(IMGSENSORMAGIC,20,ACDK_SENSOR_CONTROL_STRUCT)
+//sensorClose
+//This command will TBD
+#define KDIMGSENSORIOC_T_CLOSE            _IO(IMGSENSORMAGIC,25)
+//sensorSearch 
+#define KDIMGSENSORIOC_T_CHECK_IS_ALIVE     _IO(IMGSENSORMAGIC, 30) 
+//set sensor driver
+#define KDIMGSENSORIOC_X_SET_DRIVER         _IOWR(IMGSENSORMAGIC,35,SENSOR_DRIVER_INDEX_STRUCT)
+//get socket postion
+#define KDIMGSENSORIOC_X_GET_SOCKET_POS     _IOWR(IMGSENSORMAGIC,40,u32)
+//set I2C bus 
+#define KDIMGSENSORIOC_X_SET_I2CBUS     _IOWR(IMGSENSORMAGIC,45,u32)
+//set I2C bus 
+#define KDIMGSENSORIOC_X_RELEASE_I2C_TRIGGER_LOCK     _IO(IMGSENSORMAGIC,50)
+//Set Shutter Gain Wait Done
+#define KDIMGSENSORIOC_X_SET_SHUTTER_GAIN_WAIT_DONE   _IOWR(IMGSENSORMAGIC,55,u32)//HDR
+//set mclk
+#define KDIMGSENSORIOC_X_SET_MCLK_PLL         _IOWR(IMGSENSORMAGIC,60,ACDK_SENSOR_MCLK_STRUCT)
 //set GPIO
 #define KDIMGSENSORIOC_X_SET_GPIO             _IOWR(IMGSENSORMAGIC,65,ACDK_SENSOR_GPIO_STRUCT)
-
-#ifdef CONFIG_COMPAT
-#define COMPAT_KDIMGSENSORIOC_X_GETINFO            _IOWR(IMGSENSORMAGIC, 5, COMPAT_ACDK_SENSOR_GETINFO_STRUCT)
-#define COMPAT_KDIMGSENSORIOC_X_FEATURECONCTROL    _IOWR(IMGSENSORMAGIC, 15, COMPAT_ACDK_SENSOR_FEATURECONTROL_STRUCT)
-#define COMPAT_KDIMGSENSORIOC_X_CONTROL            _IOWR(IMGSENSORMAGIC, 20, COMPAT_ACDK_SENSOR_CONTROL_STRUCT)
-#define COMPAT_KDIMGSENSORIOC_X_GETINFO2                   _IOWR(IMGSENSORMAGIC, 65, COMPAT_IMAGESENSOR_GETINFO_STRUCT)
-#define COMPAT_KDIMGSENSORIOC_X_GETRESOLUTION2      _IOWR(IMGSENSORMAGIC, 10, COMPAT_ACDK_SENSOR_PRESOLUTION_STRUCT)
-#endif
 
 /*******************************************************************************
 *
 ********************************************************************************/
 /* SENSOR CHIP VERSION */
-#define HI708_SENSOR_ID                         0x0096
-#define GC0311_SENSOR_ID            		0xbb
-#define OV5645MIPI_SENSOR_ID                    0x5645
-#define OV5648MIPI_SENSOR_ID                    0x5648
-#define T4K04_SENSOR_ID                         0x1452
-#define OV12830_SENSOR_ID		        0xC830
-#define IMX179_SENSOR_ID                        0x0179
 #define OV2722MIPI_SENSOR_ID                    0x2722
 #define MC501CB_SENSOR_ID                       0x0062
 #define MC501CC_SENSOR_ID                       0x0074
@@ -166,7 +146,6 @@
 #define OV12830_SENSOR_ID			  0xC830
 #define OV5648MIPI_SENSOR_ID                    0x5648
 #define OV5693_SENSOR_ID                        0x5690
-#define OV13850_SENSOR_ID			  0xD850
 
 #define PO6030K_SENSOR_ID                       0x0060
 #define PO4010K_SENSOR_ID                       0x0040
@@ -199,7 +178,6 @@
 
 #define S5K3H7Y_SENSOR_ID                       0x3087
 #define S5K3H2YX_SENSOR_ID                      0x382b
-#define S5K2P8_SENSOR_ID                        0x2108
 
 #define PAS105_SENSOR_ID                        0x0065
 #define PAS302_SENSOR_ID                        0x0064
@@ -248,47 +226,16 @@
 #define SP0A19_YUV_SENSOR_ID				0xA6
 #define A5142MIPI_SENSOR_ID                     0x4800
 #define GC0313MIPI_YUV_SENSOR_ID                0xD0
-#define IMX219_SENSOR_ID            			0x0219//0x0119//
-#define IMX135_SENSOR_ID                        0x0135
+#define IMX135_SENSOR_ID                        0x0135  
 #define OV16825MIPI_SENSOR_ID                       0x0168
-#define OV2680MIPI_SENSOR_ID                       0x2680
-#define IMX214_SENSOR_ID                        0x0214
-#define IMX220_SENSOR_ID                        0x0220
+
 #define GC2035_SENSOR_ID			0x2035
-#define GC0329_SENSOR_ID			0xC0
-#define GC0330_SENSOR_ID			0xC1
-#define S5K4H5YX_2LANE_SENSOR_ID                0x485B
-#define OV8865_SENSOR_ID			  0x8865
-#define S5K4H5YC_SENSOR_ID                0x485B
-#define S5K5E2YA_SENSOR_ID                      0x5e20
-
-#define OV2680_SENSOR_ID   0x2680
-#define T8EV5_SENSOR_ID                         0x1011
-#define GC2235_SENSOR_ID        0x2235
-#define OV8865_SENSOR_ID			  0x8865
 #define GC2355_SENSOR_ID			0x2355
-#define HI551_SENSOR_ID			    0x0551
-
-#define HI841_SENSOR_ID			    0x0841
-#define GC0310_SENSOR_ID			0xa310
-#define OV8858_SENSOR_ID			  0x8858
-#define IMX132MIPI_SENSOR_ID                    0x0132
-#define IMX119_SENSOR_ID                        0x0119
-#define HI191MIPI_SENSOR_ID                     0x0191
-#define HI544MIPI_SENSOR_ID                     0x0544
-#define HI707_SENSOR_ID                         0x00b8
-#define MN34152_SENSOR_ID       0x01
 /* CAMERA DRIVER NAME */
 #define CAMERA_HW_DEVNAME            "kd_camera_hw"
 
 /* SENSOR DEVICE DRIVER NAME */
-#define SENSOR_DRVNAME_HI708_YUV        "hi708yuv"
-#define SENSOR_DRVNAME_GC0311_YUV   "gc0311yuv"
-#define SENSOR_DRVNAME_OV5645_MIPI_YUV "ov5645_mipi_yuv"
 #define SENSOR_DRVNAME_OV5648_MIPI_RAW   	"ov5648mipi"
-#define SENSOR_DRVNAME_T4K04_MIPI_RAW   "t4k04mipiraw"
-#define SENSOR_DRVNAME_OV12830_MIPI_RAW   "ov12830mipiraw"
-#define SENSOR_DRVNAME_IMX179_MIPI_RAW   "imx179mipiraw"
 #define SENSOR_DRVNAME_OV2722_MIPI_RAW  "ov2722mipiraw"
 #define SENSOR_DRVNAME_MT9P012_RAW  "mt9p012"
 #define SENSOR_DRVNAME_MT9P015_RAW  "mt9p015"
@@ -353,42 +300,16 @@
 #define SENSOR_DRVNAME_OV8825_MIPI_RAW   "ov8825mipiraw"
 #define SENSOR_DRVNAME_OV12830_MIPI_RAW   "ov12830mipiraw"
 #define SENSOR_DRVNAME_GC2035_YUV   "gc2035_yuv"
-#define SENSOR_DRVNAME_GC0329_YUV   "gc0329_yuv"
-#define SENSOR_DRVNAME_GC0330_YUV   "gc0330_yuv"
 #define SENSOR_DRVNAME_GC2355_MIPI_RAW   "gc2355mipiraw"
-#define SENSOR_DRVNAME_OV13850_MIPI_RAW   "ov13850mipiraw"
 
 #define SENSOR_DRVNAME_OV9740_MIPI_YUV     "ov9740mipiyuv"
 #define SENSOR_DRVNAME_S5K3H2YX_MIPI_RAW   "s5k3h2yxmipiraw"
-#define SENSOR_DRVNAME_S5K2P8_MIPI_RAW   "s5k2p8mipiraw"
 #define SENSOR_DRVNAME_SP0A19_YUV   "sp0a19yuv"
-#define SENSOR_DRVNAME_IMX219_MIPI_RAW "imx219mipiraw"
 #define SENSOR_DRVNAME_IMX135_MIPI_RAW   "imx135mipiraw"
-#define SENSOR_DRVNAME_IMX214_MIPI_RAW   "imx214mipiraw"
-#define SENSOR_DRVNAME_IMX220_MIPI_RAW   "imx220mipiraw"
-
 #define SENSOR_DRVNAME_GC0313MIPI_YUV      "gc0313mipiyuv"
 #define SENSOR_DRVNAME_OV16825_MIPI_RAW   "OV16825mipiraw"
-#define SENSOR_DRVNAME_OV2680_MIPI_RAW   "ov2680mipiraw"
-#define SENSOR_DRVNAME_S5K4H5YX_2LANE_MIPI_RAW  "s5k4h5yx2lanemipiraw"
-#define SENSOR_DRVNAME_S5K5E2YA_MIPI_RAW        "s5k5e2yamipiraw"
-#define SENSOR_DRVNAME_GC2235_RAW 			"gc2235_raw"
-#define SENSOR_DRVNAME_OV8865_MIPI_RAW   "ov8865mipiraw"
-#define SENSOR_DRVNAME_GC2355_MIPI_RAW   "gc2355mipiraw"
-#define SENSOR_DRVNAME_HI551_MIPI_RAW   "hi551mipiraw"
-
-#define SENSOR_DRVNAME_HI841_MIPI_RAW   "hi841mipiraw"
-#define SENSOR_DRVNAME_GC0310_MIPI_YUV   "gc0310mipiyuv"
-#define SENSOR_DRVNAME_OV8858_MIPI_RAW   "ov8858mipiraw"
-#define SENSOR_DRVNAME_OV13850_MIPI_RAW   "ov13850mipiraw"
-#define SENSOR_DRVNAME_T8EV5_YUV                "t8ev5_yuv"
-#define SENSOR_DRVNAME_OV5645_MIPI_YUV "ov5645_mipi_yuv"
+#define SENSOR_DRVNAME_OV8858_MIPI_RAW "ov8858mipiraw"
 #define SENSOR_DRVNAME_IMX219_MIPI_RAW   "imx219mipiraw"
-#define SENSOR_DRVNAME_IMX119_MIPI_RAW   "imx119mipiraw"
-#define SENSOR_DRVNAME_HI191_MIPI_RAW  "hi191mipiraw"
-#define SENSOR_DRVNAME_HI544_MIPI_RAW  "hi544mipiraw"
-#define SENSOR_DRVNAME_HI707_YUV    	"hi707yuv"
-#define SENSOR_DRVNAME_MN34152_MIPI_RAW   "mn34152mipiraw"
 /*******************************************************************************
 *
 ********************************************************************************/

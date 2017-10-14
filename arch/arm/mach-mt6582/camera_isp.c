@@ -1718,7 +1718,7 @@ Bit 31:28 ? {sot_reg, eol_reg, eot_reg, sof} , reg means status record
 Bit 27:24 ?{eot, eol,eot, req}
 Bit 23 : rdy
 
-Rdy should be 1    at idle or end of tile, if not 0, 很可能是mdp 沒回rdy 
+Rdy should be 1    at idle or end of tile, if not 0, ?雈i???Omdp ?S?^rdy 
 Req  should be 0   at idle or end of tile
 
 sot_reg, eol_reg, eot_reg should be 1  at idle or end of tile
@@ -1729,7 +1729,7 @@ pix count  :  bit 15:0
 
 
 2. 0x4044 / 0x4048 status
-      It is 無須 enable, 
+      It is ?L?? enable, 
 It is clear by 0x4020[31] write or read clear,
 It has many information on it,
 You can look coda
